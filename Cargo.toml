@@ -6,12 +6,12 @@ publish = false
 
 [dependencies]
 adamo = { path = "../adamo", features = ["video", "audio", "gstreamer"] }
-base64 = "0.22"
 clap = { version = "4", features = ["derive"] }
+gstreamer = "0.23"
+gstreamer-app = "0.23"
 inputtino = { git = "https://github.com/games-on-whales/inputtino.git", branch = "stable" }
 keycode = "1"
 reis = "0.7"
-serde_json = "1"
 x11rb = { version = "0.13", features = ["xfixes"] }
 
 [patch.crates-io]

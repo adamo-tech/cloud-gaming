@@ -552,12 +552,12 @@ name = "cloud-gaming"
 version = "0.1.0"
 dependencies = [
  "adamo",
- "base64",
  "clap",
+ "gstreamer",
+ "gstreamer-app",
  "inputtino",
  "keycode",
  "reis",
- "serde_json",
  "x11rb",
 ]
 

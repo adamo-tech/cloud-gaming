@@ -27,10 +27,14 @@ The host builds against a checkout of `adamo` next to this repository.
 Close Steam on the desktop first: Steam runs one instance per user, and the host starts its own inside gamescope.
 
 ```
-ADAMO_API_KEY=... cargo run --release -- --width 1920 --height 1080 --fps 60 -- steam -gamepadui
+cargo run --release -- --width 1920 --height 1080 --fps 60 -- steam -gamepadui
 ```
 
+The host runs fully offline: no account, API key or relay. It prints a pairing key and saves it to `pairing-key` (`--pairing-key-file`) so the next start reuses it. In the player, enter this PC's address and the pairing key. The player connects directly over WebTransport on port 17447, so allow that port through the PC's firewall, for example `sudo ufw allow from 192.168.1.0/24 to any port 17447`. From outside your home network, reach the PC through Tailscale or a forwarded port.
+
 The robot is called `cloud-gaming` unless you pass `--name`.
+
+Mouse motion is spread over `--mouse-smoothing-ms` (8 by default). A 125 Hz mouse delivers two or three reports per 60 fps frame, and streaming jitter moves reports between frames, so mouse-look stutters without it. With a 500 Hz or faster gaming mouse, pass `--mouse-smoothing-ms 0` to inject each update as it arrives, like Moonlight and Selkies, with no added latency.
 
 ## Input channels
 
