@@ -108,9 +108,12 @@ struct ConnectView: View {
         error = nil
         let address = address
         let pairingKey = pairingKey
+        let screen = UIScreen.main.nativeBounds.size
+        let screenWidth = UInt32(max(screen.width, screen.height))
+        let screenHeight = UInt32(min(screen.width, screen.height))
         Task {
             do {
-                let connection = try await Task.detached { try Connection.connect(address: address, pairingKey: pairingKey) }.value
+                let connection = try await Task.detached { try Connection.connect(address: address, pairingKey: pairingKey, screenWidth: screenWidth, screenHeight: screenHeight) }.value
                 onConnect(connection)
             } catch let PlayError.Failed(message) {
                 error = message

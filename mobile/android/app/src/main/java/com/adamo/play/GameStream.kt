@@ -62,18 +62,27 @@ class GameStream(private val connection: Connection, private val gamepads: Gamep
         val callbackThread = HandlerThread("video-output").apply { start() }
         val inputBufferIndices = LinkedBlockingQueue<Int>()
         var decoder: MediaCodec? = null
+        var decoderSize: Pair<UInt, UInt>? = null
         while (isRunning && videoSurface == surface) {
             val frame = connection.receiveVideo(RECEIVE_TIMEOUT_MS) ?: continue
+            val videoFormat = if (frame.isKeyframe) videoFormat(frame.data) else null
+            val (mimeType, width, height) = when (videoFormat) {
+                is VideoFormat.Av1 -> Triple(MediaFormat.MIMETYPE_VIDEO_AV1, videoFormat.width, videoFormat.height)
+                is VideoFormat.H264 -> Triple(MediaFormat.MIMETYPE_VIDEO_AVC, videoFormat.width, videoFormat.height)
+                null -> Triple("", 0u, 0u)
+            }
+            if (decoder != null && videoFormat != null && Pair(width, height) != decoderSize) {
+                decoder.stop()
+                decoder.release()
+                decoder = null
+                inputBufferIndices.clear()
+            }
             if (decoder == null) {
-                val videoFormat = if (frame.isKeyframe) videoFormat(frame.data) else null
                 if (videoFormat == null) {
                     connection.requestKeyframe()
                     continue
                 }
-                val (mimeType, width, height) = when (videoFormat) {
-                    is VideoFormat.Av1 -> Triple(MediaFormat.MIMETYPE_VIDEO_AV1, videoFormat.width, videoFormat.height)
-                    is VideoFormat.H264 -> Triple(MediaFormat.MIMETYPE_VIDEO_AVC, videoFormat.width, videoFormat.height)
-                }
+                decoderSize = Pair(width, height)
                 videoAspectRatio.value = width.toFloat() / height.toFloat()
                 val format = MediaFormat.createVideoFormat(mimeType, width.toInt(), height.toInt())
                 format.setInteger(MediaFormat.KEY_LOW_LATENCY, 1)

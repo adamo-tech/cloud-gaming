@@ -4,13 +4,14 @@ version = 4
 
 [[package]]
 name = "adamo"
-version = "1.0.14"
+version = "1.0.20"
 dependencies = [
  "async-trait",
  "auth",
  "base64",
  "brain",
  "bytes",
+ "bzip2",
  "control",
  "dirs",
  "futures",
@@ -51,6 +52,15 @@ name = "adamo-authorization"
 version = "0.1.0"
 dependencies = [
  "zenoh-keyexpr",
+]
+
+[[package]]
+name = "adamo-bandwidth"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "libloading 0.8.9",
+ "serde",
 ]
 
 [[package]]
@@ -469,6 +479,7 @@ dependencies = [
 name = "brain"
 version = "0.1.0"
 dependencies = [
+ "adamo-bandwidth",
  "serde",
  "transport",
 ]
@@ -493,6 +504,15 @@ name = "bytes"
 version = "1.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
+
+[[package]]
+name = "bzip2"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3a53fac24f34a81bc9954b5d6cfce0c21e18ec6959f44f56e8e90e4bb7c346c"
+dependencies = [
+ "libbz2-rs-sys",
+]
 
 [[package]]
 name = "camino"
@@ -662,6 +682,7 @@ dependencies = [
  "gstreamer-app",
  "inputtino",
  "keycode",
+ "libc",
  "reis",
  "x11rb",
 ]
@@ -2515,6 +2536,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 
 [[package]]
+name = "libbz2-rs-sys"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32f454fd6831a29c0e827ed075bca2a15be201bd57f4168f0fd1041124eab17e"
+
+[[package]]
 name = "libc"
 version = "0.2.189"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2633,11 +2660,13 @@ dependencies = [
  "anyhow",
  "cc",
  "cudarc",
+ "dirs",
  "io",
  "libc",
  "libloading 0.8.9",
  "log",
  "moq-nvenc",
+ "openh264-sys2",
  "pkg-config",
  "rust_h264",
  "serde",
@@ -2867,6 +2896,16 @@ name = "once_cell_polyfill"
 version = "1.70.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
+
+[[package]]
+name = "openh264-sys2"
+version = "0.9.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8de206369120cab1be98e587adad1389e2ec00b63c62cdb3c13238000c1290a"
+dependencies = [
+ "libloading 0.8.9",
+ "sha2",
+]
 
 [[package]]
 name = "openssl-probe"
@@ -3212,6 +3251,7 @@ dependencies = [
 name = "quinn-proto"
 version = "0.11.17"
 dependencies = [
+ "adamo-bandwidth",
  "bytes",
  "fastbloom",
  "getrandom 0.4.3",
@@ -4597,6 +4637,7 @@ dependencies = [
 name = "transport"
 version = "0.1.0"
 dependencies = [
+ "adamo-bandwidth",
  "auth",
  "base64",
  "codec",

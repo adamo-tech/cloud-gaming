@@ -1,6 +1,7 @@
 package com.adamo.play
 
 import android.content.SharedPreferences
+import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +34,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -55,6 +57,7 @@ fun ConnectScreen(preferences: SharedPreferences, onConnect: (Connection) -> Uni
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val glowRadius = with(LocalDensity.current) { 520.dp.toPx() }
+    val screen = LocalContext.current.getSystemService(WindowManager::class.java).maximumWindowMetrics.bounds
 
     val play: () -> Unit = {
         preferences.edit().putString("address", address).putString("pairingKey", pairingKey).apply()
@@ -62,7 +65,7 @@ fun ConnectScreen(preferences: SharedPreferences, onConnect: (Connection) -> Uni
         error = null
         scope.launch {
             try {
-                onConnect(withContext(Dispatchers.IO) { Connection.connect(address, pairingKey) })
+                onConnect(withContext(Dispatchers.IO) { Connection.connect(address, pairingKey, maxOf(screen.width(), screen.height()).toUInt(), minOf(screen.width(), screen.height()).toUInt()) })
             } catch (exception: PlayException) {
                 error = exception.message
             }

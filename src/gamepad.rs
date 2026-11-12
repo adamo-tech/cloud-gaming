@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::mpsc::{self, RecvTimeoutError};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 
 use adamo::{ControlMessage, Joy, Robot, Rumble};
@@ -28,7 +28,7 @@ const RUMBLE_REFRESH: Duration = Duration::from_millis(200);
 
 type ActiveRumbles = Arc<Mutex<HashMap<u8, Rumble>>>;
 
-pub fn forward_gamepads(robot: &Arc<Robot>) -> adamo::Result<()> {
+pub fn forward_gamepads(robot: &Arc<RwLock<Robot>>) -> adamo::Result<()> {
     let (joy_sender, joy_receiver) = mpsc::channel::<(u8, Joy)>();
     let thread_robot = robot.clone();
     std::thread::spawn(move || {
@@ -48,13 +48,13 @@ pub fn forward_gamepads(robot: &Arc<Robot>) -> adamo::Result<()> {
             }
             if last_refresh.elapsed() >= RUMBLE_REFRESH {
                 for rumble in active_rumbles.lock().unwrap().values() {
-                    let _ = thread_robot.send_rumble(rumble);
+                    let _ = thread_robot.read().unwrap().send_rumble(rumble);
                 }
                 last_refresh = Instant::now();
             }
         }
     });
-    robot.on_control("joy/**", move |sample| {
+    robot.read().unwrap().on_control("joy/**", move |sample| {
         let joy = match sample.message {
             ControlMessage::Joy(joy) => joy,
             ControlMessage::JoystickCommand(command) => Joy {
@@ -73,7 +73,7 @@ pub fn forward_gamepads(robot: &Arc<Robot>) -> adamo::Result<()> {
     })
 }
 
-fn create_gamepad(index: u8, robot: &Arc<Robot>, active_rumbles: &ActiveRumbles) -> XboxOneJoypad {
+fn create_gamepad(index: u8, robot: &Arc<RwLock<Robot>>, active_rumbles: &ActiveRumbles) -> XboxOneJoypad {
     let definition =
         DeviceDefinition::new("Adamo virtual Xbox One pad", 0x045E, 0x02EA, 0x0408, "", "");
     let mut gamepad = XboxOneJoypad::new(&definition)
@@ -87,7 +87,7 @@ fn create_gamepad(index: u8, robot: &Arc<Robot>, active_rumbles: &ActiveRumbles)
             weak_magnitude: magnitude(weak),
             duration_ms: RUMBLE_DURATION_MS,
         };
-        let _ = robot.send_rumble(&rumble);
+        let _ = robot.read().unwrap().send_rumble(&rumble);
         let mut active_rumbles = active_rumbles.lock().unwrap();
         if strong == 0 && weak == 0 {
             active_rumbles.remove(&index);

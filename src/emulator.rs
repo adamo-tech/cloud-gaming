@@ -10,33 +10,39 @@ use reis::ei;
 use reis::event::{Connection, Device, DeviceCapability, EiEvent};
 
 pub struct Emulator {
-    connection: Connection,
+    connection: Mutex<Option<Connection>>,
     devices: Mutex<Vec<Device>>,
     sequence: AtomicU32,
     started: Instant,
 }
 
 impl Emulator {
-    pub fn connect(socket: &Path) -> Result<Arc<Self>, Box<dyn Error>> {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            connection: Mutex::new(None),
+            devices: Mutex::new(Vec::new()),
+            sequence: AtomicU32::new(0),
+            started: Instant::now(),
+        })
+    }
+
+    pub fn connect(self: &Arc<Self>, socket: &Path) -> Result<(), Box<dyn Error>> {
         let stream = UnixStream::connect(socket)?;
-        let (emulator_sender, emulator_receiver) = mpsc::channel();
+        let (connected_sender, connected_receiver) = mpsc::channel();
+        let emulator = self.clone();
         std::thread::spawn(move || {
             let context = ei::Context::new(stream).unwrap();
             let (connection, events) = context
                 .handshake_blocking("Adamo cloud gaming", ei::handshake::ContextType::Sender)
                 .unwrap();
-            let emulator = Arc::new(Self {
-                connection,
-                devices: Mutex::new(Vec::new()),
-                sequence: AtomicU32::new(0),
-                started: Instant::now(),
-            });
-            emulator_sender.send(emulator.clone()).unwrap();
+            emulator.devices.lock().unwrap().clear();
+            *emulator.connection.lock().unwrap() = Some(connection);
+            connected_sender.send(()).unwrap();
             for event in events.flatten() {
                 emulator.handle(event);
             }
         });
-        Ok(emulator_receiver.recv()?)
+        Ok(connected_receiver.recv()?)
     }
 
     pub fn press_key(&self, key: u32, is_pressed: bool) {
@@ -101,7 +107,7 @@ impl Emulator {
                 .retain(|device| *device != removed.device),
             _ => {}
         }
-        let _ = self.connection.flush();
+        let _ = self.connection().flush();
     }
 
     fn emit<T: ei::Interface>(&self, capability: DeviceCapability, request: impl Fn(T)) {
@@ -113,10 +119,15 @@ impl Emulator {
             return;
         };
         request(device.interface::<T>().unwrap());
+        let connection = self.connection();
         device.device().frame(
-            self.connection.serial(),
+            connection.serial(),
             self.started.elapsed().as_micros() as u64,
         );
-        let _ = self.connection.flush();
+        let _ = connection.flush();
+    }
+
+    fn connection(&self) -> Connection {
+        self.connection.lock().unwrap().clone().unwrap()
     }
 }

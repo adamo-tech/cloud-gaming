@@ -11,6 +11,7 @@ gstreamer = "0.23"
 gstreamer-app = "0.23"
 inputtino = { git = "https://github.com/games-on-whales/inputtino.git", branch = "stable" }
 keycode = "1"
+libc = "0.2"
 reis = "0.7"
 x11rb = { version = "0.13", features = ["xfixes"] }
 
