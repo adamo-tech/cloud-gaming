@@ -2,7 +2,7 @@
 
 Stream games from your own Linux PC to any browser with Adamo.
 
-The host runs your game in a headless gamescope session at the first player's screen resolution and publishes gamescope's PipeWire screen stream as AV1 video and the game's audio as Opus through the Adamo SDK. Keyboard and mouse input reach gamescope through its libei socket, gamepads become virtual Xbox pads, and the cursor and gamepad rumble are sent back to the player. The PC does not sleep while a game is streaming.
+The host runs your game in a headless gamescope session at the player's screen resolution and publishes gamescope's PipeWire screen stream as AV1 video and the game's audio as Opus through the Adamo SDK. Keyboard and mouse input reach gamescope through its libei socket, gamepads become virtual Xbox pads, and the cursor and gamepad rumble are sent back to the player. The PC does not sleep while a game is streaming.
 
 ## Requirements
 
@@ -30,7 +30,7 @@ Close Steam on the desktop first: Steam runs one instance per user, and the host
 cargo run --release -- --fps 60 -- steam -gamepadui
 ```
 
-The host waits for the first player to connect and starts gamescope at that player's screen size, scaled down to fit within `--max-width` by `--max-height` (2560 by 1440 by default). The size stays until the host stops, so a later player with a different screen gets black bars.
+The host waits for a player to connect and starts gamescope at that player's screen size, scaled down to fit within `--max-width` by `--max-height` (2560 by 1440 by default). When a player connects with a different screen size, the host restarts gamescope at the new size, which closes the running game. Reconnecting from the same screen keeps the game running. The host assumes one player at a time.
 
 The host runs fully offline: no account, API key or relay. It prints a pairing key and saves it to `pairing-key` (`--pairing-key-file`) so the next start reuses it. In the player, enter this PC's address and the pairing key. The player connects directly over WebTransport on port 17447, so allow that port through the PC's firewall, for example `sudo ufw allow from 192.168.1.0/24 to any port 17447`. From outside your home network, reach the PC through Tailscale or a forwarded port.
 

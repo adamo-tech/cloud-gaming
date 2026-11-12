@@ -682,6 +682,7 @@ dependencies = [
  "gstreamer-app",
  "inputtino",
  "keycode",
+ "libc",
  "reis",
  "x11rb",
 ]

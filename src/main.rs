@@ -9,9 +9,11 @@ use std::collections::HashSet;
 use std::error::Error;
 use std::io::Write;
 use std::os::unix::fs::OpenOptionsExt;
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::sync::{Arc, mpsc};
+use std::process::{Child, Command};
+use std::sync::mpsc::{self, Receiver};
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 use adamo::p2p::P2pOptions;
@@ -46,20 +48,17 @@ struct Args {
     command: Vec<String>,
 }
 
+struct Gamescope {
+    process: Child,
+    input_socket: PathBuf,
+    x_display: String,
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
     start_audio_sink()?;
     let mut robot = open_robot(&args)?;
-    let (width, height) = wait_for_first_display(&robot, args.max_width, args.max_height)?;
-    let previous_x_displays = x_displays()?;
-    start_gamescope(&args, width, height)?;
-    let input_socket =
-        PathBuf::from(std::env::var("XDG_RUNTIME_DIR")?).join(GAMESCOPE_INPUT_SOCKET);
-    wait_until(|| Ok(input_socket.exists()))?;
-    let x_display = wait_for_new_x_display(&previous_x_displays)?;
-
-    let track = robot.video_with_options("screen", &video_options(&args, width, height))?;
     let audio_source = format!(
         "pipewiresrc target-object={AUDIO_SINK} stream-properties={MONITOR_CAPTURE} ! audio/x-raw,channels=2"
     );
@@ -69,16 +68,46 @@ fn main() -> Result<(), Box<dyn Error>> {
         ..AudioOptions::default()
     };
     robot.attach_audio_gst("audio", &audio_source, &audio_options)?;
-
-    let robot = Arc::new(robot);
-    let emulator = emulator::Emulator::connect(&input_socket)?;
+    let displays = watch_displays(&robot, args.max_width, args.max_height)?;
+    let emulator = emulator::Emulator::new();
     keyboard::forward_keyboard(&robot, emulator.clone())?;
-    mouse::forward_mouse(&robot, emulator, args.mouse_smoothing_ms)?;
+    mouse::forward_mouse(&robot, emulator.clone(), args.mouse_smoothing_ms)?;
+    let robot = Arc::new(RwLock::new(robot));
     gamepad::forward_gamepads(&robot)?;
-    let cursor = cursor::CursorReader::connect(&x_display, width, height)?;
-    capture::stream_gamescope(track, cursor, width, height, args.fps)?;
-    robot.run()?;
-    Ok(())
+
+    let mut size = displays.recv()?;
+    loop {
+        let gamescope = Gamescope::start(&args, size)?;
+        emulator.connect(&gamescope.input_socket)?;
+        let track = {
+            let mut robot = robot.write().unwrap();
+            robot.remove_video("screen");
+            robot.video_with_options("screen", &video_options(&args, size))?
+        };
+        let cursor = cursor::CursorReader::connect(&gamescope.x_display, size.0, size.1)?;
+        capture::stream_gamescope(track, cursor, size.0, size.1, args.fps)?;
+        size = run_until_resized(&robot.read().unwrap(), &displays, size)?;
+        gamescope.stop()?;
+    }
+}
+
+fn run_until_resized(
+    robot: &Robot,
+    displays: &Receiver<(u32, u32)>,
+    size: (u32, u32),
+) -> Result<(u32, u32), Box<dyn Error>> {
+    std::thread::scope(|scope| -> Result<(u32, u32), Box<dyn Error>> {
+        let run = scope.spawn(|| robot.run());
+        let new_size = loop {
+            let display = displays.recv()?;
+            if display != size {
+                break display;
+            }
+        };
+        robot.stop()?;
+        run.join().unwrap()?;
+        Ok(new_size)
+    })
 }
 
 fn start_audio_sink() -> Result<(), Box<dyn Error>> {
@@ -99,59 +128,77 @@ fn start_audio_sink() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn wait_for_first_display(
+fn watch_displays(
     robot: &Robot,
     max_width: u32,
     max_height: u32,
-) -> Result<(u32, u32), Box<dyn Error>> {
+) -> adamo::Result<Receiver<(u32, u32)>> {
     let (sender, receiver) = mpsc::channel();
     robot.on_control("json/display", move |sample| {
         if let ControlMessage::Raw(display) = sample.message {
-            let _ = sender.send(display);
+            let (width, height) = (display["width"].as_f64().unwrap(), display["height"].as_f64().unwrap());
+            let scale = (f64::from(max_width) / width)
+                .min(f64::from(max_height) / height)
+                .min(1.0);
+            let even = |size: f64| (size * scale) as u32 & !1;
+            let _ = sender.send((even(width), even(height)));
         }
     })?;
-    let display = receiver.recv()?;
-    let (width, height) = (display["width"].as_f64().unwrap(), display["height"].as_f64().unwrap());
-    let scale = (f64::from(max_width) / width)
-        .min(f64::from(max_height) / height)
-        .min(1.0);
-    let even = |size: f64| (size * scale) as u32 & !1;
-    Ok((even(width), even(height)))
+    Ok(receiver)
 }
 
-fn start_gamescope(args: &Args, width: u32, height: u32) -> Result<(), Box<dyn Error>> {
-    let (width, height, fps) = (
-        width.to_string(),
-        height.to_string(),
-        args.fps.to_string(),
-    );
-    Command::new("systemd-inhibit")
-        .args([
-            "--what=sleep:idle",
-            "--who=Adamo cloud gaming",
-            "--why=Streaming a game",
-        ])
-        .args([
-            "gamescope",
-            "-e",
-            "--backend",
-            "headless",
-            "-W",
-            &width,
-            "-H",
-            &height,
-            "-w",
-            &width,
-            "-h",
-            &height,
-            "-r",
-            &fps,
-            "--",
-        ])
-        .args(&args.command)
-        .env("PULSE_SINK", AUDIO_SINK)
-        .spawn()?;
-    Ok(())
+impl Gamescope {
+    fn start(args: &Args, (width, height): (u32, u32)) -> Result<Self, Box<dyn Error>> {
+        let previous_x_displays = x_displays()?;
+        let (width, height, fps) = (
+            width.to_string(),
+            height.to_string(),
+            args.fps.to_string(),
+        );
+        let process = Command::new("systemd-inhibit")
+            .args([
+                "--what=sleep:idle",
+                "--who=Adamo cloud gaming",
+                "--why=Streaming a game",
+            ])
+            .args([
+                "gamescope",
+                "-e",
+                "--backend",
+                "headless",
+                "-W",
+                &width,
+                "-H",
+                &height,
+                "-w",
+                &width,
+                "-h",
+                &height,
+                "-r",
+                &fps,
+                "--",
+            ])
+            .args(&args.command)
+            .env("PULSE_SINK", AUDIO_SINK)
+            .process_group(0)
+            .spawn()?;
+        let input_socket =
+            PathBuf::from(std::env::var("XDG_RUNTIME_DIR")?).join(GAMESCOPE_INPUT_SOCKET);
+        wait_until(|| Ok(input_socket.exists()))?;
+        let x_display = wait_for_new_x_display(&previous_x_displays)?;
+        Ok(Self {
+            process,
+            input_socket,
+            x_display,
+        })
+    }
+
+    fn stop(mut self) -> std::io::Result<()> {
+        let process_group = self.process.id() as libc::pid_t;
+        unsafe { libc::killpg(process_group, libc::SIGTERM) };
+        self.process.wait()?;
+        wait_until(|| Ok(unsafe { libc::killpg(process_group, 0) } != 0))
+    }
 }
 
 fn open_robot(args: &Args) -> Result<Robot, Box<dyn Error>> {
@@ -178,7 +225,7 @@ fn open_robot(args: &Args) -> Result<Robot, Box<dyn Error>> {
     Ok(robot)
 }
 
-fn video_options(args: &Args, width: u32, height: u32) -> VideoOptions {
+fn video_options(args: &Args, (width, height): (u32, u32)) -> VideoOptions {
     VideoOptions {
         width,
         height,
