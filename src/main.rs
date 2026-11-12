@@ -11,11 +11,11 @@ use std::io::Write;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::Arc;
+use std::sync::{Arc, mpsc};
 use std::time::Duration;
 
 use adamo::p2p::P2pOptions;
-use adamo::{AudioChannels, AudioOptions, Robot, VideoOptions};
+use adamo::{AudioChannels, AudioOptions, ControlMessage, Robot, VideoOptions};
 use clap::Parser;
 
 const AUDIO_SINK: &str = "cloud_gaming_audio";
@@ -26,10 +26,10 @@ const GAMESCOPE_INPUT_SOCKET: &str = "gamescope-0-ei";
 struct Args {
     #[arg(long, default_value = "cloud-gaming")]
     name: String,
-    #[arg(long, default_value_t = 1920)]
-    width: u32,
-    #[arg(long, default_value_t = 1080)]
-    height: u32,
+    #[arg(long, default_value_t = 2560)]
+    max_width: u32,
+    #[arg(long, default_value_t = 1440)]
+    max_height: u32,
     #[arg(long, default_value_t = 60)]
     fps: u32,
     #[arg(long, default_value_t = 20_000)]
@@ -50,15 +50,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
     start_audio_sink()?;
+    let mut robot = open_robot(&args)?;
+    let (width, height) = wait_for_first_display(&robot, args.max_width, args.max_height)?;
     let previous_x_displays = x_displays()?;
-    start_gamescope(&args)?;
+    start_gamescope(&args, width, height)?;
     let input_socket =
         PathBuf::from(std::env::var("XDG_RUNTIME_DIR")?).join(GAMESCOPE_INPUT_SOCKET);
     wait_until(|| Ok(input_socket.exists()))?;
     let x_display = wait_for_new_x_display(&previous_x_displays)?;
 
-    let mut robot = open_robot(&args)?;
-    let track = robot.video_with_options("screen", &video_options(&args))?;
+    let track = robot.video_with_options("screen", &video_options(&args, width, height))?;
     let audio_source = format!(
         "pipewiresrc target-object={AUDIO_SINK} stream-properties={MONITOR_CAPTURE} ! audio/x-raw,channels=2"
     );
@@ -74,8 +75,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     keyboard::forward_keyboard(&robot, emulator.clone())?;
     mouse::forward_mouse(&robot, emulator, args.mouse_smoothing_ms)?;
     gamepad::forward_gamepads(&robot)?;
-    let cursor = cursor::CursorReader::connect(&x_display, args.width, args.height)?;
-    capture::stream_gamescope(track, cursor, args.width, args.height, args.fps)?;
+    let cursor = cursor::CursorReader::connect(&x_display, width, height)?;
+    capture::stream_gamescope(track, cursor, width, height, args.fps)?;
     robot.run()?;
     Ok(())
 }
@@ -98,10 +99,30 @@ fn start_audio_sink() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn start_gamescope(args: &Args) -> Result<(), Box<dyn Error>> {
+fn wait_for_first_display(
+    robot: &Robot,
+    max_width: u32,
+    max_height: u32,
+) -> Result<(u32, u32), Box<dyn Error>> {
+    let (sender, receiver) = mpsc::channel();
+    robot.on_control("json/display", move |sample| {
+        if let ControlMessage::Raw(display) = sample.message {
+            let _ = sender.send(display);
+        }
+    })?;
+    let display = receiver.recv()?;
+    let (width, height) = (display["width"].as_f64().unwrap(), display["height"].as_f64().unwrap());
+    let scale = (f64::from(max_width) / width)
+        .min(f64::from(max_height) / height)
+        .min(1.0);
+    let even = |size: f64| (size * scale) as u32 & !1;
+    Ok((even(width), even(height)))
+}
+
+fn start_gamescope(args: &Args, width: u32, height: u32) -> Result<(), Box<dyn Error>> {
     let (width, height, fps) = (
-        args.width.to_string(),
-        args.height.to_string(),
+        width.to_string(),
+        height.to_string(),
         args.fps.to_string(),
     );
     Command::new("systemd-inhibit")
@@ -157,10 +178,10 @@ fn open_robot(args: &Args) -> Result<Robot, Box<dyn Error>> {
     Ok(robot)
 }
 
-fn video_options(args: &Args) -> VideoOptions {
+fn video_options(args: &Args, width: u32, height: u32) -> VideoOptions {
     VideoOptions {
-        width: args.width,
-        height: args.height,
+        width,
+        height,
         fps: args.fps,
         codec: args.codec.clone(),
         encoder: args.encoder.clone(),

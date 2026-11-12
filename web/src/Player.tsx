@@ -1,15 +1,17 @@
-import { useState, type ComponentProps } from "react";
+import { useEffect, useState, type ComponentProps } from "react";
 import {
   AdamoProvider,
   AudioStream,
   GamepadController,
+  Reliability,
   Stream,
   useOrg,
+  usePublisher,
   useRobotOnline,
   useSubscription,
   type StreamStats,
 } from "adamo-react";
-import { decodeRumbleMessage, playRumble, rumbleKey } from "adamo/teleop";
+import { controlKey, decodeRumbleMessage, playRumble, rumbleKey } from "adamo/teleop";
 import { PausedOverlay } from "./PausedOverlay";
 import { useInputCapture, usePointerLocked } from "./useInputCapture";
 
@@ -26,6 +28,16 @@ export function Player({ robot, audioSession, onExit }: PlayerProps) {
   const isOnline = useRobotOnline(robot);
   const isLocked = usePointerLocked();
   const [stats, setStats] = useState<StreamStats | null>(null);
+  const display = usePublisher(org ? controlKey(org, robot, "json/display") : "", {
+    reliability: Reliability.RELIABLE,
+  });
+
+  useEffect(() => {
+    if (!display) return;
+    const width = Math.round(Math.max(screen.width, screen.height) * devicePixelRatio);
+    const height = Math.round(Math.min(screen.width, screen.height) * devicePixelRatio);
+    void display.put(new TextEncoder().encode(JSON.stringify({ width, height })));
+  }, [display]);
 
   useInputCapture(org, robot);
   useSubscription(org ? rumbleKey(org, robot) : "", (sample) => {

@@ -90,12 +90,14 @@ pub struct Connection {
 #[uniffi::export]
 impl Connection {
     #[uniffi::constructor]
-    pub fn connect(address: String, pairing_key: String) -> Result<Arc<Self>, PlayError> {
+    pub fn connect(address: String, pairing_key: String, screen_width: u32, screen_height: u32) -> Result<Arc<Self>, PlayError> {
         let session = Arc::new(Session::connect_local(&address, &pairing_key)?);
         let robot = session.local_robot().unwrap().to_owned();
         let video = AccessUnitReceiver::subscribe(session.clone(), &robot, VIDEO_TRACK)?;
         let audio = AudioReceiver::subscribe(&session, &robot, AUDIO_TRACK, AudioReceiveOptions::default())?;
         let rumbles = session.subscribe_owned(&format!("{robot}/feedback/gamepad/rumble"))?;
+        let display = serde_json::json!({"width": screen_width, "height": screen_height});
+        session.put(&format!("{robot}/control/json/display"), display.to_string().as_bytes(), PublishOptions::default())?;
         Ok(Arc::new(Self {
             session,
             robot,
