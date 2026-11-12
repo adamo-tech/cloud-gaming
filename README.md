@@ -53,3 +53,21 @@ Rumble for pad `<index>` arrives on `adamo/{org}/{robot}/feedback/gamepad/rumble
 ```
 cd web && npm install && npm run dev
 ```
+
+## Adamo Play
+
+`mobile/` is the phone player for iOS and Android. Pair a controller with the phone, or play with the on-screen controller that shows while no controller is connected. `mobile/core` is a Rust crate on the Adamo SDK that connects to the PC, receives AV1 or H.264 video and audio, sends the gamepad and receives rumble; UniFFI generates its Swift and Kotlin bindings. Each app decodes video in hardware (VideoToolbox, MediaCodec) and reads controllers natively (GameController, Android input events).
+
+AV1 needs an iPhone with an A17 Pro or newer; for older iPhones, run the host with `--codec h264`. Android phones without an AV1 decoder fall back to Android's software decoder.
+
+Android, with the Android SDK, NDK 27.2.12479018 and `cargo install cargo-ndk`:
+
+```
+cd mobile/android && ./gradlew installDebug
+```
+
+iOS, with Xcode and `brew install xcodegen`:
+
+```
+mobile/build-core.sh iphonesimulator && cd mobile/ios && xcodegen && open AdamoPlay.xcodeproj
+```

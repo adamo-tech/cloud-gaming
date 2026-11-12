@@ -1,2 +1,9 @@
 /target
 node_modules
+/mobile/android/.gradle
+/mobile/android/.kotlin
+/mobile/android/build
+/mobile/android/app/build
+/mobile/android/local.properties
+/mobile/ios/Generated
+/mobile/ios/AdamoPlay.xcodeproj

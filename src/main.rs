@@ -34,6 +34,10 @@ struct Args {
     fps: u32,
     #[arg(long, default_value_t = 20_000)]
     bitrate_kbps: u32,
+    #[arg(long, default_value = "av1")]
+    codec: String,
+    #[arg(long)]
+    encoder: Option<String>,
     #[arg(long, default_value_t = 8.0)]
     mouse_smoothing_ms: f32,
     #[arg(long, default_value = "pairing-key")]
@@ -55,8 +59,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut robot = open_robot(&args)?;
     let track = robot.video_with_options("screen", &video_options(&args))?;
-    let audio_source =
-        format!("pipewiresrc target-object={AUDIO_SINK} stream-properties={MONITOR_CAPTURE}");
+    let audio_source = format!(
+        "pipewiresrc target-object={AUDIO_SINK} stream-properties={MONITOR_CAPTURE} ! audio/x-raw,channels=2"
+    );
     let audio_options = AudioOptions {
         channels: AudioChannels::Stereo,
         bitrate_kbps: 128,
@@ -157,7 +162,8 @@ fn video_options(args: &Args) -> VideoOptions {
         width: args.width,
         height: args.height,
         fps: args.fps,
-        codec: "av1".into(),
+        codec: args.codec.clone(),
+        encoder: args.encoder.clone(),
         bitrate_kbps: args.bitrate_kbps,
         rate_control: Some("cbr".into()),
         intra_refresh: false,
