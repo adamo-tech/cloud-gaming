@@ -75,3 +75,14 @@ struct PrimaryButtonStyle: ButtonStyle {
             .opacity(isEnabled ? 1 : 0.4)
     }
 }
+
+struct Backdrop: View {
+    var body: some View {
+        ZStack {
+            Color.background
+            RadialGradient(colors: [.white.opacity(0.07), .clear], center: .topLeading, startRadius: 0, endRadius: 520)
+            Logomark().fill(.white.opacity(0.025)).frame(width: 520).offset(x: -260, y: 120)
+        }
+        .clipped()
+    }
+}

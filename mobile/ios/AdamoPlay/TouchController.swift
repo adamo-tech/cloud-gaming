@@ -6,6 +6,7 @@ private let raise: CGFloat = 72
 
 struct TouchController: View {
     let gamepads: Gamepads
+    var isStacked = false
 
     var body: some View {
         VStack {
@@ -15,6 +16,10 @@ struct TouchController: View {
                     Shoulder(label: "LB") { gamepads.setTouchButton(4, isPressed: $0) }
                 }
                 Spacer()
+                if isStacked {
+                    menuButtons
+                    Spacer()
+                }
                 HStack(spacing: 10) {
                     Shoulder(label: "RB") { gamepads.setTouchButton(5, isPressed: $0) }
                     Shoulder(label: "RT") { gamepads.setTouchTrigger(7, isPressed: $0) }
@@ -32,12 +37,10 @@ struct TouchController: View {
                     )
                 }
                 Spacer()
-                HStack(spacing: 14) {
-                    PadButton(symbol: "rectangle.on.rectangle", size: 36) { gamepads.setTouchButton(8, isPressed: $0) }
-                    PadButton(isLogomark: true, size: 40) { gamepads.setTouchButton(16, isPressed: $0) }
-                    PadButton(symbol: "line.3.horizontal", size: 36) { gamepads.setTouchButton(9, isPressed: $0) }
+                if !isStacked {
+                    menuButtons
+                    Spacer()
                 }
-                Spacer()
                 HStack(alignment: .bottom, spacing: 18) {
                     Stick { gamepads.setTouchStick(xAxis: 2, x: $0, y: $1) }
                     Cross(
@@ -52,6 +55,14 @@ struct TouchController: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 16)
+    }
+
+    private var menuButtons: some View {
+        HStack(spacing: 14) {
+            PadButton(symbol: "rectangle.on.rectangle", size: 36) { gamepads.setTouchButton(8, isPressed: $0) }
+            PadButton(isLogomark: true, size: 40) { gamepads.setTouchButton(16, isPressed: $0) }
+            PadButton(symbol: "line.3.horizontal", size: 36) { gamepads.setTouchButton(9, isPressed: $0) }
+        }
     }
 }
 

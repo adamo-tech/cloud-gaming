@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ConnectView: View {
+    let tabletopFold: CGRect?
     let onConnect: (Connection) -> Void
     @AppStorage("address") private var address = ""
     @AppStorage("pairingKey") private var pairingKey = ""
@@ -14,9 +15,7 @@ struct ConnectView: View {
 
     var body: some View {
         ZStack {
-            Color.background.ignoresSafeArea()
-            RadialGradient(colors: [.white.opacity(0.07), .clear], center: .topLeading, startRadius: 0, endRadius: 520).ignoresSafeArea()
-            Logomark().fill(.white.opacity(0.025)).frame(width: 520).offset(x: -260, y: 120)
+            Backdrop().ignoresSafeArea()
             let layout = verticalSizeClass == .compact ? AnyLayout(HStackLayout(spacing: 48)) : AnyLayout(VStackLayout(alignment: .leading, spacing: 32))
             layout {
                 VStack(alignment: .leading, spacing: 16) {
@@ -108,9 +107,11 @@ struct ConnectView: View {
         error = nil
         let address = address
         let pairingKey = pairingKey
-        let screen = UIScreen.main.nativeBounds.size
-        let screenWidth = UInt32(max(screen.width, screen.height))
-        let screenHeight = UInt32(min(screen.width, screen.height))
+        let window = UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first!
+        let scale = window.traitCollection.displayScale
+        let videoSize = CGSize(width: window.bounds.width * scale, height: (tabletopFold?.minY ?? window.bounds.height) * scale)
+        let screenWidth = UInt32(max(videoSize.width, videoSize.height))
+        let screenHeight = UInt32(min(videoSize.width, videoSize.height))
         Task {
             do {
                 let connection = try await Task.detached { try Connection.connect(address: address, pairingKey: pairingKey, screenWidth: screenWidth, screenHeight: screenHeight) }.value

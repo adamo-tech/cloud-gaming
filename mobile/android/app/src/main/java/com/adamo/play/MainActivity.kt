@@ -1,5 +1,6 @@
 package com.adamo.play
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.system.Os
 import android.view.KeyEvent
@@ -9,13 +10,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.window.layout.FoldingFeature
+import androidx.window.layout.WindowInfoTracker
 
 class MainActivity : ComponentActivity() {
     private lateinit var gamepads: Gamepads
@@ -30,13 +36,19 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContent {
             MaterialTheme(colorScheme = darkColorScheme(primary = Color.White, onPrimary = Palette.background, background = Palette.background, surface = Palette.background)) {
+                val windowLayout by remember { WindowInfoTracker.getOrCreate(this@MainActivity).windowLayoutInfo(this@MainActivity) }.collectAsState(null)
+                val fold = windowLayout?.displayFeatures?.filterIsInstance<FoldingFeature>()?.firstOrNull()
+                val tabletopFold = fold?.takeIf { it.orientation == FoldingFeature.Orientation.HORIZONTAL }?.bounds
+                LaunchedEffect(fold != null) {
+                    requestedOrientation = if (fold != null) ActivityInfo.SCREEN_ORIENTATION_SENSOR else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                }
                 val currentStream = stream
                 if (currentStream == null) {
-                    ConnectScreen(preferences) { connection ->
+                    ConnectScreen(preferences, tabletopFold) { connection ->
                         stream = GameStream(connection, gamepads)
                     }
                 } else {
-                    PlayScreen(currentStream, gamepads) {
+                    PlayScreen(currentStream, gamepads, tabletopFold) {
                         currentStream.close()
                         stream = null
                     }
