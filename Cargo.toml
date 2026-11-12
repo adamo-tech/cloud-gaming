@@ -1,0 +1,23 @@
+[package]
+name = "cloud-gaming"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+adamo = { path = "../adamo", features = ["video", "audio", "gstreamer"] }
+clap = { version = "4", features = ["derive"] }
+gstreamer = "0.23"
+gstreamer-app = "0.23"
+inputtino = { git = "https://github.com/games-on-whales/inputtino.git", branch = "stable" }
+keycode = "1"
+reis = "0.7"
+x11rb = { version = "0.13", features = ["xfixes"] }
+
+[workspace]
+members = ["mobile/core"]
+
+[patch.crates-io]
+zenoh = { path = "../adamo/zenoh/zenoh" }
+zenoh-config = { path = "../adamo/zenoh/commons/zenoh-config" }
+quinn-proto = { path = "../adamo/vendor/quinn-proto" }

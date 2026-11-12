@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["vite/client", "webxr"],
+    "paths": {
+      "adamo/*": ["../../adamo-web/adamo-ts/packages/adamo/src/*/index.ts"],
+      "adamo-react": ["../../adamo-web/adamo-ts/packages/adamo-react/src/index.tsx"],
+      "@adamo-tech/zenoh-webtransport": ["../../adamo-web/adamo-ts/packages/zenoh-webtransport/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}
