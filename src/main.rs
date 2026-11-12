@@ -5,7 +5,6 @@ mod gamepad;
 mod keyboard;
 mod mouse;
 
-use std::collections::HashSet;
 use std::error::Error;
 use std::io::Write;
 use std::os::unix::fs::OpenOptionsExt;
@@ -149,7 +148,6 @@ fn watch_displays(
 
 impl Gamescope {
     fn start(args: &Args, (width, height): (u32, u32)) -> Result<Self, Box<dyn Error>> {
-        let previous_x_displays = x_displays()?;
         let (width, height, fps) = (
             width.to_string(),
             height.to_string(),
@@ -185,7 +183,7 @@ impl Gamescope {
         let input_socket =
             PathBuf::from(std::env::var("XDG_RUNTIME_DIR")?).join(GAMESCOPE_INPUT_SOCKET);
         wait_until(|| Ok(input_socket.exists()))?;
-        let x_display = wait_for_new_x_display(&previous_x_displays)?;
+        let x_display = wait_for_x_display(process.id() as libc::pid_t)?;
         Ok(Self {
             process,
             input_socket,
@@ -250,10 +248,10 @@ fn save_secret(path: &Path, secret: &str) -> std::io::Result<()> {
     file.write_all(secret.as_bytes())
 }
 
-fn wait_for_new_x_display(previous_x_displays: &HashSet<String>) -> Result<String, Box<dyn Error>> {
+fn wait_for_x_display(process_group: libc::pid_t) -> std::io::Result<String> {
     loop {
-        if let Some(display) = x_displays()?.difference(previous_x_displays).next() {
-            return Ok(display.clone());
+        if let Some(display) = x_display_of(process_group)? {
+            return Ok(display);
         }
         std::thread::sleep(Duration::from_millis(100));
     }
@@ -266,14 +264,14 @@ fn wait_until(is_ready: impl Fn() -> std::io::Result<bool>) -> std::io::Result<(
     Ok(())
 }
 
-fn x_displays() -> std::io::Result<HashSet<String>> {
+fn x_display_of(process_group: libc::pid_t) -> std::io::Result<Option<String>> {
     let sockets = std::fs::read_dir("/tmp/.X11-unix")?.flatten();
     Ok(sockets
         .filter_map(|entry| {
-            Some(format!(
-                ":{}",
-                entry.file_name().to_str()?.strip_prefix('X')?
-            ))
+            let number = entry.file_name().to_str()?.strip_prefix('X')?.to_owned();
+            let lock = std::fs::read_to_string(format!("/tmp/.X{number}-lock")).ok()?;
+            let owner = lock.trim_matches(|c: char| c.is_whitespace() || c == '\0').parse().ok()?;
+            (unsafe { libc::getpgid(owner) } == process_group).then(|| format!(":{number}"))
         })
-        .collect())
+        .next())
 }
