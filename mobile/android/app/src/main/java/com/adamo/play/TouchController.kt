@@ -55,7 +55,7 @@ private val IDLE_CONTENT = Color.White.copy(alpha = 0.9f)
 private enum class Glyph(val degrees: Float) { Up(0f), Right(90f), Down(180f), Left(270f), View(0f), Menu(0f) }
 
 @Composable
-fun TouchController(gamepads: Gamepads) {
+fun TouchController(gamepads: Gamepads, modifier: Modifier = Modifier, isStacked: Boolean = false) {
     val gamepad = gamepads.virtualGamepad
 
     fun button(index: Int): (Boolean) -> Unit = { isPressed ->
@@ -75,13 +75,25 @@ fun TouchController(gamepads: Gamepads) {
         gamepads.sendVirtual()
     }
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp)) {
-        Row(Modifier.fillMaxWidth()) {
+    val menuButtons = @Composable {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            GlyphButton(Glyph.View, button(8), 36.dp)
+            PadButton(button(16), 40.dp) { Logomark(Modifier.size(18.dp), it) }
+            GlyphButton(Glyph.Menu, button(9), 36.dp)
+        }
+    }
+
+    Column(modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Shoulder("LT", trigger(6, LEFT_TRIGGER_AXIS))
                 Shoulder("LB", button(4))
             }
             Spacer(Modifier.weight(1f))
+            if (isStacked) {
+                menuButtons()
+                Spacer(Modifier.weight(1f))
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Shoulder("RB", button(5))
                 Shoulder("RT", trigger(7, RIGHT_TRIGGER_AXIS))
@@ -99,12 +111,10 @@ fun TouchController(gamepads: Gamepads) {
                 )
             }
             Spacer(Modifier.weight(1f))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                GlyphButton(Glyph.View, button(8), 36.dp)
-                PadButton(button(16), 40.dp) { Logomark(Modifier.size(18.dp), it) }
-                GlyphButton(Glyph.Menu, button(9), 36.dp)
+            if (!isStacked) {
+                menuButtons()
+                Spacer(Modifier.weight(1f))
             }
-            Spacer(Modifier.weight(1f))
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                 Stick(stick(2))
                 Box(Modifier.padding(bottom = RAISE)) {

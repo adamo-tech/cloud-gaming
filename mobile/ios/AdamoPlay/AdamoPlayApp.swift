@@ -4,6 +4,7 @@ import SwiftUI
 struct AdamoPlayApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var stream: GameStream?
+    @State private var fold: CGRect?
 
     init() {
         UserDefaults.standard.register(defaults: [phoneVibrationKey: true])
@@ -11,19 +12,21 @@ struct AdamoPlayApp: App {
 
     var body: some Scene {
         WindowGroup {
+            let tabletopFold = fold.flatMap { $0.width > $0.height ? $0 : nil }
             Group {
                 if let stream {
-                    PlayView(stream: stream, gamepads: stream.gamepads) {
+                    PlayView(stream: stream, gamepads: stream.gamepads, tabletopFold: tabletopFold) {
                         stream.close()
                         self.stream = nil
                     }
                 } else {
-                    ConnectView { connection in stream = GameStream(connection: connection) }
+                    ConnectView(tabletopFold: tabletopFold) { connection in stream = GameStream(connection: connection) }
                 }
             }
+            .background(FoldReader(fold: $fold).ignoresSafeArea())
             .preferredColorScheme(.dark)
             .animation(.easeOut(duration: 0.2), value: stream == nil)
-            .onChange(of: stream == nil) { _, isDisconnected in setOrientations(isDisconnected ? .allButUpsideDown : .landscape) }
+            .onChange(of: stream == nil || fold != nil) { _, isFree in setOrientations(isFree ? .allButUpsideDown : .landscape) }
         }
     }
 }

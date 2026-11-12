@@ -1,6 +1,7 @@
 package com.adamo.play
 
 import android.content.SharedPreferences
+import android.graphics.Rect
 import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,10 +11,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -30,12 +29,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -50,22 +46,24 @@ import uniffi.adamo_play.Connection
 import uniffi.adamo_play.PlayException
 
 @Composable
-fun ConnectScreen(preferences: SharedPreferences, onConnect: (Connection) -> Unit) {
+fun ConnectScreen(preferences: SharedPreferences, tabletopFold: Rect?, onConnect: (Connection) -> Unit) {
     var address by remember { mutableStateOf(preferences.getString("address", "")!!) }
     var pairingKey by remember { mutableStateOf(preferences.getString("pairingKey", "")!!) }
     var isConnecting by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
-    val glowRadius = with(LocalDensity.current) { 520.dp.toPx() }
-    val screen = LocalContext.current.getSystemService(WindowManager::class.java).maximumWindowMetrics.bounds
+    val windowManager = LocalContext.current.getSystemService(WindowManager::class.java)
 
     val play: () -> Unit = {
         preferences.edit().putString("address", address).putString("pairingKey", pairingKey).apply()
         isConnecting = true
         error = null
+        val window = windowManager.currentWindowMetrics.bounds
+        val videoWidth = window.width()
+        val videoHeight = tabletopFold?.top ?: window.height()
         scope.launch {
             try {
-                onConnect(withContext(Dispatchers.IO) { Connection.connect(address, pairingKey, maxOf(screen.width(), screen.height()).toUInt(), minOf(screen.width(), screen.height()).toUInt()) })
+                onConnect(withContext(Dispatchers.IO) { Connection.connect(address, pairingKey, maxOf(videoWidth, videoHeight).toUInt(), minOf(videoWidth, videoHeight).toUInt()) })
             } catch (exception: PlayException) {
                 error = exception.message
             }
@@ -73,14 +71,8 @@ fun ConnectScreen(preferences: SharedPreferences, onConnect: (Connection) -> Uni
         }
     }
 
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Palette.background)
-            .background(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.07f), Color.Transparent), center = Offset.Zero, radius = glowRadius)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Logomark(Modifier.offset((-260).dp, 120.dp).requiredSize(520.dp, 430.dp), Color.White.copy(alpha = 0.025f))
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Backdrop()
         Row(Modifier.padding(32.dp), horizontalArrangement = Arrangement.spacedBy(48.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f, fill = false).widthIn(max = 320.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Logomark(Modifier.size(44.dp, 36.dp))

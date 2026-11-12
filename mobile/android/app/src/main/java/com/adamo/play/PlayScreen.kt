@@ -1,5 +1,6 @@
 package com.adamo.play
 
+import android.graphics.Rect
 import android.view.SurfaceView
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -14,7 +15,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,7 +47,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
 
 @Composable
-fun PlayScreen(stream: GameStream, gamepads: Gamepads, onExit: () -> Unit) {
+fun PlayScreen(stream: GameStream, gamepads: Gamepads, tabletopFold: Rect?, onExit: () -> Unit) {
     val videoAspectRatio by stream.videoAspectRatio
     val error by stream.error
     val hasPhysicalGamepad by gamepads.hasPhysicalGamepad
@@ -55,14 +59,20 @@ fun PlayScreen(stream: GameStream, gamepads: Gamepads, onExit: () -> Unit) {
         delay(4000)
         showsHint = false
     }
+    val foldEdges = with(LocalDensity.current) { tabletopFold?.let { it.top.toDp() to it.bottom.toDp() } }
     BackHandler { isMenuOpen = !isMenuOpen }
     Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-        AndroidView(
-            factory = { context -> SurfaceView(context).apply { holder.addCallback(stream) } },
-            modifier = Modifier.aspectRatio(videoAspectRatio),
-        )
+        Backdrop(Modifier.padding(top = foldEdges?.second ?: 0.dp))
+        Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().then(foldEdges?.let { Modifier.height(it.first) } ?: Modifier.fillMaxHeight()), contentAlignment = Alignment.Center) {
+            AndroidView(
+                factory = { context -> SurfaceView(context).apply { holder.addCallback(stream) } },
+                modifier = Modifier.aspectRatio(videoAspectRatio),
+            )
+        }
         Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures(onLongPress = { isMenuOpen = true }) })
-        if (showsTouchControls && !isMenuOpen) TouchController(gamepads)
+        if (showsTouchControls && !isMenuOpen) {
+            if (foldEdges != null) TouchController(gamepads, Modifier.padding(top = foldEdges.second), isStacked = true) else TouchController(gamepads)
+        }
         AnimatedVisibility(showsHint, Modifier.align(Alignment.TopCenter).padding(top = 12.dp), exit = fadeOut(tween(600))) {
             Text(
                 "Hold anywhere for the menu",

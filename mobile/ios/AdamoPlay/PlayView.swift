@@ -3,6 +3,7 @@ import SwiftUI
 struct PlayView: View {
     @ObservedObject var stream: GameStream
     @ObservedObject var gamepads: Gamepads
+    let tabletopFold: CGRect?
     let onExit: () -> Void
     @State private var showsTouchControls = true
     @AppStorage(phoneVibrationKey) private var isPhoneVibrationEnabled = true
@@ -12,13 +13,25 @@ struct PlayView: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            VideoLayer(view: stream.videoView).ignoresSafeArea()
+            Backdrop()
+                .padding(.top, tabletopFold?.maxY ?? 0)
+                .ignoresSafeArea()
+            VideoLayer(view: stream.videoView)
+                .frame(height: tabletopFold?.minY)
+                .frame(maxHeight: .infinity, alignment: .top)
+                .ignoresSafeArea()
             Color.clear
                 .contentShape(Rectangle())
                 .ignoresSafeArea()
                 .onLongPressGesture(minimumDuration: 0.6) { isMenuOpen = true }
             if showsTouchControls && !isMenuOpen {
-                TouchController(gamepads: gamepads)
+                if let tabletopFold {
+                    TouchController(gamepads: gamepads, isStacked: true)
+                        .padding(.top, tabletopFold.maxY)
+                        .ignoresSafeArea(edges: .top)
+                } else {
+                    TouchController(gamepads: gamepads)
+                }
             }
             if showsHint {
                 Text("Hold anywhere for the menu")
@@ -110,6 +123,36 @@ struct PlayView: View {
         .padding(24)
         .frame(width: 380)
         .glass(cornerRadius: 22)
+    }
+}
+
+struct FoldReader: UIViewRepresentable {
+    @Binding var fold: CGRect?
+
+    func makeUIView(context: Context) -> FoldView {
+        let view = FoldView()
+        view.isUserInteractionEnabled = false
+        view.onFoldChange = { fold in DispatchQueue.main.async { self.fold = fold } }
+        if #available(iOS 27.1, *) {
+            view.addInteraction(UIHingeInteraction { [weak view] _, update in view?.isUnfolded = [.partiallyOpen, .fullyOpen].contains(update.hinge?.status) })
+        }
+        return view
+    }
+
+    func updateUIView(_ view: FoldView, context: Context) {}
+}
+
+final class FoldView: UIView {
+    var onFoldChange: (CGRect?) -> Void = { _ in }
+    var isUnfolded = false {
+        didSet { setNeedsLayout() }
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if #available(iOS 27.1, *) {
+            onFoldChange(isUnfolded ? reservedRegions(kind: .division, options: .includeInactive).first?.frame : nil)
+        }
     }
 }
 

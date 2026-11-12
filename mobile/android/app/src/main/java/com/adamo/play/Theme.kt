@@ -5,8 +5,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.runtime.Composable
@@ -14,12 +17,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -102,5 +108,20 @@ fun Logomark(modifier: Modifier, color: Color = Color.White) {
         translate((size.width - 128f * logomarkScale) / 2, (size.height - 106f * logomarkScale) / 2) {
             scale(logomarkScale, pivot = Offset.Zero) { drawPath(logomarkPath, color) }
         }
+    }
+}
+
+@Composable
+fun Backdrop(modifier: Modifier = Modifier) {
+    val glowRadius = with(LocalDensity.current) { 520.dp.toPx() }
+    Box(
+        modifier
+            .fillMaxSize()
+            .clipToBounds()
+            .background(Palette.background)
+            .background(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.07f), Color.Transparent), center = Offset.Zero, radius = glowRadius)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Logomark(Modifier.offset((-260).dp, 120.dp).requiredSize(520.dp, 430.dp), Color.White.copy(alpha = 0.025f))
     }
 }
