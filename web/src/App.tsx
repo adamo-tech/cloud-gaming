@@ -20,7 +20,7 @@ export function App() {
     localStorage.setItem("address", address);
     localStorage.setItem("pairingKey", pairingKey);
     setError(null);
-    enterPlay();
+    void enterPlay();
     setIsConnecting(true);
     createZenohWebTransport({ receiveBufferBytes: 8 * 1024 * 1024, maxPendingSends: 96 })
       .then((runtime) => connectLocalRobot(runtime, address, pairingKey))

@@ -2,7 +2,6 @@ import SwiftUI
 
 extension Color {
     static let background = Color(red: 0.035, green: 0.035, blue: 0.043)
-    static let card = Color(red: 0.059, green: 0.059, blue: 0.071)
     static let glass = Color.white.opacity(0.06)
     static let glassBorder = Color.white.opacity(0.12)
     static let foreground = Color(red: 0.91, green: 0.906, blue: 0.953)

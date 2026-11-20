@@ -13,7 +13,10 @@ pub fn video_format(keyframe: &[u8]) -> Option<VideoFormat> {
         let payload_start = header_length + size_length;
         let obu_length = payload_start + payload_length;
         if obu_type == OBU_SEQUENCE_HEADER {
-            return Some(parse_sequence_header(&rest[..obu_length], &rest[payload_start..obu_length]));
+            return Some(parse_sequence_header(
+                &rest[..obu_length],
+                &rest[payload_start..obu_length],
+            ));
         }
         rest = &rest[obu_length..];
     }
@@ -73,8 +76,14 @@ fn parse_sequence_header(obu: &[u8], payload: &[u8]) -> VideoFormat {
         color.subsampling_x,
         color.subsampling_y,
     ];
-    let packed_flags = flags.iter().fold(0, |packed, flag| packed << 1 | flag) << 2 | color.chroma_sample_position;
-    let mut codec_configuration = vec![CONFIGURATION_MARKER_AND_VERSION, (profile << 5 | level) as u8, packed_flags as u8, 0];
+    let packed_flags =
+        flags.iter().fold(0, |packed, flag| packed << 1 | flag) << 2 | color.chroma_sample_position;
+    let mut codec_configuration = vec![
+        CONFIGURATION_MARKER_AND_VERSION,
+        (profile << 5 | level) as u8,
+        packed_flags as u8,
+        0,
+    ];
     codec_configuration.extend_from_slice(obu);
     VideoFormat::Av1 {
         width,
@@ -161,7 +170,11 @@ fn read_color_config(bits: &mut BitReader, profile: u32) -> ColorConfig {
         }
         _ if is_twelve_bit => {
             color.subsampling_x = bits.read(1);
-            color.subsampling_y = if color.subsampling_x == 1 { bits.read(1) } else { 0 };
+            color.subsampling_y = if color.subsampling_x == 1 {
+                bits.read(1)
+            } else {
+                0
+            };
         }
         _ => color.subsampling_y = 0,
     }
@@ -178,12 +191,19 @@ mod tests {
     #[test]
     fn matches_the_av1c_box_ffmpeg_writes_for_an_svt_av1_keyframe() {
         let keyframe = [
-            0x12, 0x00, 0x0A, 0x0C, 0x02, 0x00, 0x00, 0x4A, 0x95, 0x5D, 0xFE, 0x1B, 0x8D, 0x5F, 0x30, 0x08, 0x32, 0xCC,
+            0x12, 0x00, 0x0A, 0x0C, 0x02, 0x00, 0x00, 0x4A, 0x95, 0x5D, 0xFE, 0x1B, 0x8D, 0x5F,
+            0x30, 0x08, 0x32, 0xCC,
         ];
         let ffmpeg_av1c = [
-            0x81, 0x09, 0x0C, 0x00, 0x0A, 0x0C, 0x02, 0x00, 0x00, 0x4A, 0x95, 0x5D, 0xFE, 0x1B, 0x8D, 0x5F, 0x30, 0x08,
+            0x81, 0x09, 0x0C, 0x00, 0x0A, 0x0C, 0x02, 0x00, 0x00, 0x4A, 0x95, 0x5D, 0xFE, 0x1B,
+            0x8D, 0x5F, 0x30, 0x08,
         ];
-        let Some(VideoFormat::Av1 { width, height, codec_configuration }) = video_format(&keyframe) else {
+        let Some(VideoFormat::Av1 {
+            width,
+            height,
+            codec_configuration,
+        }) = video_format(&keyframe)
+        else {
             panic!("no AV1 format");
         };
         assert_eq!((width, height), (1920, 1080));

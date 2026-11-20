@@ -1,76 +1,142 @@
-# cloud-gaming
+<div align="center">
+  <img src=".github/banner.svg" alt="Adamo">
+  <h1>Adamo Cloud Gaming</h1>
+  <p>Stream games from your Linux PC to a browser or phone, peer to peer.</p>
 
-Stream games from your own Linux PC to any browser with Adamo.
+  ![Host](https://img.shields.io/badge/host-Linux-FCC624?logo=linux&logoColor=black)
+  ![Players](https://img.shields.io/badge/players-Chrome%20%7C%20Firefox%20%7C%20Safari%20%7C%20iOS%20%7C%20Android-informational)
+  ![Video](https://img.shields.io/badge/video-AV1%20%7C%20H.264-blueviolet)
+  ![Rust](https://img.shields.io/badge/rust-2024-orange?logo=rust)
+  ![License](https://img.shields.io/github/license/adamo-tech/cloud-gaming)
+</div>
 
-The host runs your game in a headless gamescope session at the player's screen resolution and publishes gamescope's PipeWire screen stream as AV1 video and the game's audio as Opus through the Adamo SDK. Keyboard and mouse input reach gamescope through its libei socket, gamepads become virtual Xbox pads, and the cursor and gamepad rumble are sent back to the player. The PC does not sleep while a game is streaming.
+## Set up the gaming PC
 
-## Requirements
+You need:
 
-- Linux with a GPU that encodes AV1: NVIDIA RTX 40 or newer, Intel Arc, or AMD RDNA3 or newer.
-- gamescope and Steam.
-- PipeWire with pipewire-pulse (`pactl`), and systemd.
-- Write access to `/dev/uinput` for virtual gamepads:
-  ```
-  echo 'KERNEL=="uinput", MODE="0660", GROUP="input"' | sudo tee /etc/udev/rules.d/60-cloud-gaming.rules
-  sudo usermod -aG input $USER
-  ```
-- Build dependencies (Ubuntu 24.04 names):
-  ```
-  sudo apt install build-essential pkg-config clang libclang-dev cmake libx264-dev libdav1d-dev libopus-dev libasound2-dev \
-    libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev gstreamer1.0-pipewire libevdev-dev libva-dev libc++-dev
-  ```
+- Linux with systemd, PipeWire and pipewire-pulse.
+- A GPU that encodes AV1: NVIDIA RTX 40 or newer, Intel Arc, or AMD RDNA3 or newer. Older GPUs can stream H.264 instead (see [Tips](#tips)).
+- [gamescope](https://github.com/ValveSoftware/gamescope) and Steam.
 
-The host builds against a checkout of `adamo` next to this repository.
+Install the build dependencies (Ubuntu 24.04 and Debian 13 package names) and Rust:
 
-## Run
+```
+sudo apt install build-essential pkg-config clang libclang-dev cmake libx264-dev libdav1d-dev libopus-dev libasound2-dev \
+  libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev gstreamer1.0-pipewire \
+  libevdev-dev libva-dev libc++-dev pulseaudio-utils
+curl https://sh.rustup.rs -sSf | sh
+```
+
+Let the host create virtual gamepads, then log out and back in so the group change applies:
+
+```
+echo 'KERNEL=="uinput", MODE="0660", GROUP="input"' | sudo tee /etc/udev/rules.d/60-cloud-gaming.rules
+sudo udevadm control --reload && sudo udevadm trigger --name-match=uinput
+sudo usermod -aG input $USER
+```
+
+Players connect directly to the PC on port 17447. Allow it from your local network, for example with ufw:
+
+```
+sudo ufw allow from 192.168.1.0/24 to any port 17447
+```
+
+## Start the host
 
 Close Steam on the desktop first: Steam runs one instance per user, and the host starts its own inside gamescope.
 
 ```
-cargo run --release -- --fps 60 -- steam -gamepadui
+git clone https://github.com/adamo-tech/cloud-gaming.git
+cd cloud-gaming
+cargo run --release -- -- steam -gamepadui
 ```
 
-The host waits for a player to connect and starts gamescope at that player's screen size, scaled down to fit within `--max-width` by `--max-height` (2560 by 1440 by default). When a player connects with a different screen size, the host restarts gamescope at the new size, which closes the running game. Reconnecting from the same screen keeps the game running. The host assumes one player at a time.
+Everything after the second `--` is the game command, so you can launch any game or launcher, not only Steam.
 
-The host runs fully offline: no account, API key or relay. It prints a pairing key and saves it to `pairing-key` (`--pairing-key-file`) so the next start reuses it. In the player, enter this PC's address and the pairing key. The player connects directly over WebTransport on port 17447, so allow that port through the PC's firewall, for example `sudo ufw allow from 192.168.1.0/24 to any port 17447`. From outside your home network, reach the PC through Tailscale or a forwarded port.
-
-The robot is called `cloud-gaming` unless you pass `--name`.
-
-Mouse motion is spread over `--mouse-smoothing-ms` (8 by default). A 125 Hz mouse delivers two or three reports per 60 fps frame, and streaming jitter moves reports between frames, so mouse-look stutters without it. With a 500 Hz or faster gaming mouse, pass `--mouse-smoothing-ms 0` to inject each update as it arrives, like Moonlight and Selkies, with no added latency.
-
-## Input channels
-
-| Channel | Message |
-| --- | --- |
-| `json/display` | `{"width", "height"}`, the player's screen size in pixels, sent once on connect |
-| `json/keyboard` | `Keyboard`, key codes as the browser's `KeyboardEvent.code` |
-| `json/mouse` | `Mouse`, running totals of motion and wheel, buttons as `MouseEvent.buttons` |
-| `joy/<index>` | `Joy` or `JoystickCommand` in the standard gamepad layout, one channel per pad |
-
-Rumble for pad `<index>` arrives on `adamo/{org}/{robot}/feedback/gamepad/rumble`. The cursor arrives on `adamo/{org}/{robot}/cursor/image` (RGBA and hotspot, on change and once a second) and `adamo/{org}/{robot}/cursor/position` (on change), for the player to draw over the video.
-
-## Player
-
-`web/` is the browser player. It needs Chrome for AV1 decoding and keyboard lock.
+The host prints a line like:
 
 ```
-cd web && npm install && npm run dev
+Connect from the player to this PC's address, port 17447, with pairing key <key>
 ```
 
-## Adamo Play
+The pairing key is what lets a player in. The host saves it to `pairing-key` (readable only by you) and reuses it on every start, so you pair each player once. To revoke every player, stop the host, delete `pairing-key` and start it again: it prints a new key.
 
-`mobile/` is the phone player for iOS and Android. Pair a controller with the phone, or play with the on-screen controller that shows while no controller is connected. `mobile/core` is a Rust crate on the Adamo SDK that connects to the PC, receives AV1 or H.264 video and audio, sends the gamepad and receives rumble; UniFFI generates its Swift and Kotlin bindings. Each app decodes video in hardware (VideoToolbox, MediaCodec) and reads controllers natively (GameController, Android input events).
+The host waits for a player before it starts gamescope, at that player's screen size. It keeps the PC awake while a game is streaming.
 
-AV1 needs an iPhone with an A17 Pro or newer; for older iPhones, run the host with `--codec h264`. Android phones without an AV1 decoder fall back to Android's software decoder.
+| Option | Default | What it does |
+| --- | --- | --- |
+| `--fps` | `60` | Frame rate of gamescope and the stream |
+| `--bitrate-kbps` | `20000` | Video bitrate |
+| `--codec` | `av1` | `av1` or `h264` |
+| `--encoder` | automatic | Force a specific encoder |
+| `--max-width`, `--max-height` | `2560`, `1440` | Largest resolution; bigger screens are scaled down to fit |
+| `--mouse-smoothing-ms` | `8` | Spreads mouse motion over this many milliseconds; `0` turns it off |
+| `--pairing-key-file` | `pairing-key` | Where the pairing key is saved |
+| `--name` | `cloud-gaming` | The host's name, shown in the browser player |
 
-Android, with the Android SDK, NDK 27.2.12479018 and `cargo install cargo-ndk`:
+## Play in a browser
+
+The browser player runs in Chrome, Firefox and Safari. Safari decodes AV1 only up to 1080p, so for Safari start the host with `--max-width 1920 --max-height 1080`, or with `--codec h264`. Only Chrome locks the keyboard, so in Firefox and Safari some shortcuts still go to the browser.
 
 ```
-cd mobile/android && ./gradlew installDebug
+cd web
+npm install
+npm run dev
 ```
 
-iOS, with Xcode and `brew install xcodegen`:
+Open http://localhost:5180, enter the gaming PC's address (for example `192.168.1.20`) and the pairing key, and press Play. The player goes fullscreen and captures the mouse and keyboard. Press Esc to release them, and click the video to capture them again. Up to four gamepads connected to the computer are forwarded.
+
+## Play on Android
+
+Adamo Play runs on 64-bit Android 12 or newer. To build it you need the Android SDK with NDK 27.2.12479018, JDK 17, and:
 
 ```
-mobile/build-core.sh iphonesimulator && cd mobile/ios && xcodegen && open AdamoPlay.xcodeproj
+rustup target add aarch64-linux-android
+cargo install cargo-ndk
 ```
+
+Connect the phone with USB debugging on, then:
+
+```
+cd mobile/android
+./gradlew installDebug
+```
+
+## Play on iPhone
+
+Adamo Play runs on iOS 17 or newer. AV1 needs an iPhone with an A17 Pro or newer; for older iPhones, start the host with `--codec h264`. To build it you need Xcode and:
+
+```
+brew install xcodegen
+rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+mobile/build-core.sh iphonesimulator
+cd mobile/ios
+xcodegen
+open AdamoPlay.xcodeproj
+```
+
+To run on your iPhone, pick it as the run destination and set your team under Signing & Capabilities.
+
+## Use the phone apps
+
+Enter the gaming PC's address and the pairing key, and tap Play. The app remembers both.
+
+- Pair a Bluetooth controller in the phone's settings, or play with the on-screen controller, which shows while no controller is connected.
+- Hold anywhere on the screen for the menu: turn the on-screen controller on or off, turn phone vibration on or off, or disconnect.
+- Controller rumble plays on the controller, or on the phone when you play with the on-screen controller.
+- On a foldable held half open, the game sits above the hinge and the controller below it.
+
+## Play away from home
+
+To play outside your home network, put both devices on [Tailscale](https://tailscale.com) and use the PC's Tailscale address, or forward port 17447 on your router to the PC.
+
+## Tips
+
+- **Older GPUs and iPhones:** `--codec h264` works on far more hardware than AV1.
+- **Stuttering mouse-look:** a 125 Hz mouse sends two or three reports per frame, so the host smooths motion over 8 ms by default. With a 500 Hz or faster gaming mouse, `--mouse-smoothing-ms 0` sends every report as it arrives, with no added latency.
+- **Changing screens:** reconnecting from the same screen keeps the game running. A player with a different screen size restarts gamescope at the new size, which closes the game.
+- **One player at a time:** the host is built for a single player.
+
+## License
+
+[Apache-2.0](LICENSE)

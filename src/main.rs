@@ -135,7 +135,10 @@ fn watch_displays(
     let (sender, receiver) = mpsc::channel();
     robot.on_control("json/display", move |sample| {
         if let ControlMessage::Raw(display) = sample.message {
-            let (width, height) = (display["width"].as_f64().unwrap(), display["height"].as_f64().unwrap());
+            let (width, height) = (
+                display["width"].as_f64().unwrap(),
+                display["height"].as_f64().unwrap(),
+            );
             let scale = (f64::from(max_width) / width)
                 .min(f64::from(max_height) / height)
                 .min(1.0);
@@ -148,11 +151,7 @@ fn watch_displays(
 
 impl Gamescope {
     fn start(args: &Args, (width, height): (u32, u32)) -> Result<Self, Box<dyn Error>> {
-        let (width, height, fps) = (
-            width.to_string(),
-            height.to_string(),
-            args.fps.to_string(),
-        );
+        let (width, height, fps) = (width.to_string(), height.to_string(), args.fps.to_string());
         let process = Command::new("systemd-inhibit")
             .args([
                 "--what=sleep:idle",
@@ -182,8 +181,8 @@ impl Gamescope {
             .spawn()?;
         let input_socket =
             PathBuf::from(std::env::var("XDG_RUNTIME_DIR")?).join(GAMESCOPE_INPUT_SOCKET);
-        wait_until(|| Ok(input_socket.exists()))?;
-        let x_display = wait_for_x_display(process.id() as libc::pid_t)?;
+        wait_for(|| Ok(input_socket.exists().then_some(())))?;
+        let x_display = wait_for(|| x_display_of(process.id() as libc::pid_t))?;
         Ok(Self {
             process,
             input_socket,
@@ -195,7 +194,7 @@ impl Gamescope {
         let process_group = self.process.id() as libc::pid_t;
         unsafe { libc::killpg(process_group, libc::SIGTERM) };
         self.process.wait()?;
-        wait_until(|| Ok(unsafe { libc::killpg(process_group, 0) } != 0))
+        wait_for(|| Ok((unsafe { libc::killpg(process_group, 0) } != 0).then_some(())))
     }
 }
 
@@ -248,20 +247,13 @@ fn save_secret(path: &Path, secret: &str) -> std::io::Result<()> {
     file.write_all(secret.as_bytes())
 }
 
-fn wait_for_x_display(process_group: libc::pid_t) -> std::io::Result<String> {
+fn wait_for<T>(ready: impl Fn() -> std::io::Result<Option<T>>) -> std::io::Result<T> {
     loop {
-        if let Some(display) = x_display_of(process_group)? {
-            return Ok(display);
+        if let Some(value) = ready()? {
+            return Ok(value);
         }
         std::thread::sleep(Duration::from_millis(100));
     }
-}
-
-fn wait_until(is_ready: impl Fn() -> std::io::Result<bool>) -> std::io::Result<()> {
-    while !is_ready()? {
-        std::thread::sleep(Duration::from_millis(100));
-    }
-    Ok(())
 }
 
 fn x_display_of(process_group: libc::pid_t) -> std::io::Result<Option<String>> {
@@ -270,7 +262,10 @@ fn x_display_of(process_group: libc::pid_t) -> std::io::Result<Option<String>> {
         .filter_map(|entry| {
             let number = entry.file_name().to_str()?.strip_prefix('X')?.to_owned();
             let lock = std::fs::read_to_string(format!("/tmp/.X{number}-lock")).ok()?;
-            let owner = lock.trim_matches(|c: char| c.is_whitespace() || c == '\0').parse().ok()?;
+            let owner = lock
+                .trim_matches(|c: char| c.is_whitespace() || c == '\0')
+                .parse()
+                .ok()?;
             (unsafe { libc::getpgid(owner) } == process_group).then(|| format!(":{number}"))
         })
         .next())
