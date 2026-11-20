@@ -34,6 +34,10 @@ impl<'a> BitReader<'a> {
 
     pub fn read_signed_exp_golomb(&mut self) -> i32 {
         let value = self.read_exp_golomb() as i32;
-        if value % 2 == 1 { (value + 1) / 2 } else { -value / 2 }
+        if value % 2 == 1 {
+            (value + 1) / 2
+        } else {
+            -value / 2
+        }
     }
 }

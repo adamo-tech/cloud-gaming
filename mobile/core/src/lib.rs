@@ -6,7 +6,9 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use adamo::video_receive_session::AccessUnitReceiver;
-use adamo::{AudioReceiveOptions, AudioReceiver, Joy, Priority, PublishOptions, Rumble, Session, Subscriber};
+use adamo::{
+    AudioReceiveOptions, AudioReceiver, Joy, Priority, PublishOptions, Rumble, Session, Subscriber,
+};
 
 uniffi::setup_scaffolding!();
 
@@ -90,14 +92,28 @@ pub struct Connection {
 #[uniffi::export]
 impl Connection {
     #[uniffi::constructor]
-    pub fn connect(address: String, pairing_key: String, screen_width: u32, screen_height: u32) -> Result<Arc<Self>, PlayError> {
+    pub fn connect(
+        address: String,
+        pairing_key: String,
+        screen_width: u32,
+        screen_height: u32,
+    ) -> Result<Arc<Self>, PlayError> {
         let session = Arc::new(Session::connect_local(&address, &pairing_key)?);
         let robot = session.local_robot().unwrap().to_owned();
         let video = AccessUnitReceiver::subscribe(session.clone(), &robot, VIDEO_TRACK)?;
-        let audio = AudioReceiver::subscribe(&session, &robot, AUDIO_TRACK, AudioReceiveOptions::default())?;
+        let audio = AudioReceiver::subscribe(
+            &session,
+            &robot,
+            AUDIO_TRACK,
+            AudioReceiveOptions::default(),
+        )?;
         let rumbles = session.subscribe_owned(&format!("{robot}/feedback/gamepad/rumble"))?;
         let display = serde_json::json!({"width": screen_width, "height": screen_height});
-        session.put(&format!("{robot}/control/json/display"), display.to_string().as_bytes(), PublishOptions::default())?;
+        session.put(
+            &format!("{robot}/control/json/display"),
+            display.to_string().as_bytes(),
+            PublishOptions::default(),
+        )?;
         Ok(Arc::new(Self {
             session,
             robot,
@@ -109,6 +125,16 @@ impl Connection {
 
     pub fn receive_video(&self, timeout_ms: u32) -> Result<Option<VideoFrame>, PlayError> {
         let access_unit = self.video.lock().unwrap().recv(milliseconds(timeout_ms))?;
+        if access_unit.is_none()
+            && self
+                .session
+                .live_tokens(&format!("{}/_direct/available", self.robot))?
+                .is_empty()
+        {
+            return Err(PlayError::Failed {
+                message: "The gaming PC stopped responding.".to_owned(),
+            });
+        }
         Ok(access_unit.map(|access_unit| VideoFrame {
             data: access_unit.payload,
             is_keyframe: access_unit.keyframe,
@@ -122,7 +148,11 @@ impl Connection {
     pub fn receive_audio(&self, timeout_ms: u32) -> Result<Option<AudioFrame>, PlayError> {
         let frame = self.audio.recv(milliseconds(timeout_ms))?;
         Ok(frame.map(|frame| AudioFrame {
-            pcm_bytes: frame.samples.iter().flat_map(|sample| sample.to_le_bytes()).collect(),
+            pcm_bytes: frame
+                .samples
+                .iter()
+                .flat_map(|sample| sample.to_le_bytes())
+                .collect(),
             sample_rate: frame.sample_rate,
             channel_count: frame.channels,
         }))
@@ -134,9 +164,10 @@ impl Connection {
             Err(adamo::Error::Timeout) => return Ok(None),
             Err(error) => return Err(error.into()),
         };
-        let rumble: Rumble = serde_json::from_slice(&sample.payload).map_err(|error| PlayError::Failed {
-            message: error.to_string(),
-        })?;
+        let rumble: Rumble =
+            serde_json::from_slice(&sample.payload).map_err(|error| PlayError::Failed {
+                message: error.to_string(),
+            })?;
         Ok(Some(GamepadRumble {
             gamepad_index: rumble.gamepad_index,
             strong_magnitude: rumble.strong_magnitude,
@@ -145,14 +176,28 @@ impl Connection {
         }))
     }
 
-    pub fn send_gamepad(&self, gamepad_index: u8, axes: Vec<f64>, buttons: Vec<i32>) -> Result<(), PlayError> {
-        let payload = Joy { axes, buttons, stamp: 0.0 }.to_msgpack()?;
+    pub fn send_gamepad(
+        &self,
+        gamepad_index: u8,
+        axes: Vec<f64>,
+        buttons: Vec<i32>,
+    ) -> Result<(), PlayError> {
+        let payload = Joy {
+            axes,
+            buttons,
+            stamp: 0.0,
+        }
+        .to_msgpack()?;
         let options = PublishOptions {
             priority: Priority::REAL_TIME,
             express: true,
             compression: false,
         };
-        Ok(self.session.put(&format!("{}/control/joy/{gamepad_index}", self.robot), &payload, options)?)
+        Ok(self.session.put(
+            &format!("{}/control/joy/{gamepad_index}", self.robot),
+            &payload,
+            options,
+        )?)
     }
 }
 

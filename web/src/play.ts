@@ -1,10 +1,8 @@
 type KeyboardLockNavigator = Navigator & { keyboard?: { lock(): Promise<void> } };
 
-export function enterPlay(): void {
-  if (!document.fullscreenElement) {
-    void document.documentElement.requestFullscreen().then(lockKeyboard);
-  }
-  void lockPointer();
+export async function enterPlay(): Promise<void> {
+  const fullscreen = document.fullscreenElement ? Promise.resolve() : document.documentElement.requestFullscreen().then(lockKeyboard);
+  await lockPointer().catch(() => fullscreen.then(lockPointer));
 }
 
 export function leavePlay(): void {

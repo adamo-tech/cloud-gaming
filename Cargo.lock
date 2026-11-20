@@ -4,63 +4,64 @@ version = 4
 
 [[package]]
 name = "adamo"
-version = "1.0.20"
+version = "1.0.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0eec303555c4e192a8844958ee94a335046cd15ea24e6513e3be2ef75ef257f8"
 dependencies = [
+ "adamo-quinn",
+ "adamo-quinn-proto",
+ "adamo-web-transport-quinn",
+ "adamo-zenoh",
+ "alsa",
+ "anyhow",
  "async-trait",
- "auth",
  "base64",
- "brain",
  "bytes",
  "bzip2",
- "control",
+ "cc",
+ "cudarc",
  "dirs",
+ "flate2",
  "futures",
+ "futures-timer",
+ "futures-util",
  "getrandom 0.3.4",
+ "gstreamer",
+ "gstreamer-app",
+ "gstreamer-video",
  "http",
  "http-body-util",
  "hyper",
  "hyper-util",
- "io",
+ "iceoryx2",
+ "json-patch",
+ "jsonwebtoken",
  "libc",
+ "libloading 0.8.9",
  "log",
- "media",
- "media-pipeline",
+ "moq-nvenc",
+ "openh264-sys2",
  "opus",
- "quinn",
- "quinn-proto",
+ "pkg-config",
  "rcgen",
  "reqwest",
  "ring",
  "rmp-serde",
+ "rust_h264",
  "rustls",
+ "secrecy",
  "serde",
  "serde_json",
  "sha2",
  "subtle",
  "tar",
  "tempfile",
+ "thiserror",
  "time",
  "tokio",
  "tokio-util",
- "transport",
  "url",
- "web-transport-quinn",
-]
-
-[[package]]
-name = "adamo-authorization"
-version = "0.1.0"
-dependencies = [
- "zenoh-keyexpr",
-]
-
-[[package]]
-name = "adamo-bandwidth"
-version = "0.1.0"
-dependencies = [
- "libc",
- "libloading 0.8.9",
- "serde",
+ "zune-jpeg",
 ]
 
 [[package]]
@@ -71,6 +72,157 @@ dependencies = [
  "serde_json",
  "thiserror",
  "uniffi",
+]
+
+[[package]]
+name = "adamo-quinn"
+version = "0.11.11-adamo.1.0.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f3bbe000c5f3f97f0105ef04b12cfd0c4b27cb6a837d4d8db5beddd4f7d6793"
+dependencies = [
+ "adamo-quinn-proto",
+ "bytes",
+ "cfg_aliases",
+ "pin-project-lite",
+ "quinn-udp",
+ "rustc-hash 2.1.3",
+ "rustls",
+ "socket2 0.6.5",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "web-time",
+]
+
+[[package]]
+name = "adamo-quinn-proto"
+version = "0.11.17-adamo.1.0.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2890d882c5ce0cf8c1c99050908faf9a386abe79e50c17a655d987ed355068a"
+dependencies = [
+ "bytes",
+ "fastbloom",
+ "getrandom 0.4.3",
+ "libc",
+ "libloading 0.8.9",
+ "lru-slab",
+ "rand 0.10.2",
+ "rand_pcg",
+ "ring",
+ "rustc-hash 2.1.3",
+ "rustls",
+ "rustls-pki-types",
+ "rustls-platform-verifier",
+ "serde",
+ "slab",
+ "thiserror",
+ "tinyvec",
+ "tracing",
+ "web-time",
+]
+
+[[package]]
+name = "adamo-web-transport-quinn"
+version = "0.12.1-adamo.1.0.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e46a0ea9f9b3ef80b5e166588b47a7eb3c0758fe4eb8d81c2d024b9d48dcecad"
+dependencies = [
+ "adamo-quinn",
+ "bytes",
+ "futures",
+ "http",
+ "kio",
+ "rustls",
+ "rustls-native-certs",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "url",
+ "web-transport-proto",
+ "web-transport-trait",
+]
+
+[[package]]
+name = "adamo-zenoh"
+version = "1.9.0-adamo.1.0.31"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24b6d39171e2e0cfdbf328ce739b7adb6ef668d3342f59ed962e644c542c2a17"
+dependencies = [
+ "adamo-quinn",
+ "adamo-quinn-proto",
+ "adamo-web-transport-quinn",
+ "aes",
+ "ahash",
+ "anyhow",
+ "arc-swap",
+ "async-trait",
+ "base64",
+ "bytes",
+ "const_format",
+ "crossbeam-utils",
+ "event-listener",
+ "flate2",
+ "flume",
+ "futures",
+ "getrandom 0.2.17",
+ "git-version",
+ "hashbrown 0.16.1",
+ "hmac",
+ "home",
+ "humantime",
+ "itertools 0.14.0",
+ "json5",
+ "keyed-set",
+ "lazy_static",
+ "libc",
+ "libloading 0.8.9",
+ "lz4_flex",
+ "nix",
+ "nonempty-collections",
+ "num_cpus",
+ "once_cell",
+ "petgraph",
+ "phf",
+ "pnet_datalink",
+ "rand 0.8.8",
+ "rand_chacha",
+ "rcgen",
+ "ringbuffer-spsc",
+ "ron",
+ "rsa",
+ "rustc_version",
+ "rustls",
+ "rustls-pemfile",
+ "rustls-pki-types",
+ "rustls-webpki",
+ "schemars 1.2.2",
+ "secrecy",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "serde_yaml",
+ "sha3",
+ "shellexpand",
+ "socket2 0.5.10",
+ "time",
+ "tls-listener",
+ "token-cell",
+ "tokio",
+ "tokio-rustls",
+ "tokio-util",
+ "toml 0.9.12+spec-1.1.0",
+ "tracing",
+ "tracing-subscriber",
+ "uhlc",
+ "url",
+ "uuid",
+ "validated_struct",
+ "vec_map",
+ "webpki-roots",
+ "winapi",
+ "windows-sys 0.61.2",
+ "x509-parser",
+ "zenoh-macros",
 ]
 
 [[package]]
@@ -360,19 +512,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "auth"
-version = "0.1.0"
-dependencies = [
- "getrandom 0.3.4",
- "jsonwebtoken",
- "rcgen",
- "secrecy",
- "serde",
- "thiserror",
- "time",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -473,15 +612,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
 dependencies = [
  "generic-array",
-]
-
-[[package]]
-name = "brain"
-version = "0.1.0"
-dependencies = [
- "adamo-bandwidth",
- "serde",
- "transport",
 ]
 
 [[package]]
@@ -706,17 +836,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "codec"
-version = "0.1.0"
-dependencies = [
- "flate2",
- "json-patch",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
 name = "colorchoice"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -757,17 +876,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-xid",
-]
-
-[[package]]
-name = "control"
-version = "0.1.0"
-dependencies = [
- "auth",
- "getrandom 0.3.4",
- "thiserror",
- "tokio",
- "transport",
 ]
 
 [[package]]
@@ -2231,22 +2339,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "io"
-version = "0.1.0"
-dependencies = [
- "alsa",
- "bytes",
- "cc",
- "gstreamer",
- "gstreamer-app",
- "iceoryx2",
- "libc",
- "serde_json",
- "zenoh",
- "zune-jpeg",
-]
-
-[[package]]
 name = "ipnet"
 version = "2.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2654,39 +2746,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "media"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "cc",
- "cudarc",
- "dirs",
- "io",
- "libc",
- "libloading 0.8.9",
- "log",
- "moq-nvenc",
- "openh264-sys2",
- "pkg-config",
- "rust_h264",
- "serde",
-]
-
-[[package]]
-name = "media-pipeline"
-version = "0.1.0"
-dependencies = [
- "gstreamer",
- "gstreamer-app",
- "gstreamer-video",
- "io",
- "libloading 0.8.9",
- "log",
- "media",
- "model-runtime",
-]
-
-[[package]]
 name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2718,10 +2777,6 @@ dependencies = [
  "wasi",
  "windows-sys 0.61.2",
 ]
-
-[[package]]
-name = "model-runtime"
-version = "0.1.0"
 
 [[package]]
 name = "moq-nvenc"
@@ -3249,11 +3304,11 @@ dependencies = [
 
 [[package]]
 name = "quinn-proto"
-version = "0.11.17"
+version = "0.11.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e750cca55fe4f0439a15d0bb529da9651e79993e8e72c61a899a36d462befbe"
 dependencies = [
- "adamo-bandwidth",
  "bytes",
- "fastbloom",
  "getrandom 0.4.3",
  "lru-slab",
  "rand 0.10.2",
@@ -3262,7 +3317,6 @@ dependencies = [
  "rustc-hash 2.1.3",
  "rustls",
  "rustls-pki-types",
- "rustls-platform-verifier",
  "slab",
  "thiserror",
  "tinyvec",
@@ -4634,28 +4688,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "transport"
-version = "0.1.0"
-dependencies = [
- "adamo-bandwidth",
- "auth",
- "base64",
- "codec",
- "futures-timer",
- "futures-util",
- "libc",
- "rcgen",
- "secrecy",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "time",
- "zenoh",
- "zenoh-util",
-]
-
-[[package]]
 name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5085,27 +5117,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "web-transport-quinn"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63a239cba370789ab705c39b66d223e3b8aef85e2762046fd6b59e560f156756"
-dependencies = [
- "bytes",
- "futures",
- "http",
- "kio",
- "quinn",
- "rustls",
- "rustls-native-certs",
- "thiserror",
- "tokio",
- "tracing",
- "url",
- "web-transport-proto",
- "web-transport-trait",
-]
-
-[[package]]
 name = "web-transport-trait"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5497,128 +5508,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "zenoh"
-version = "1.9.0"
-dependencies = [
- "adamo-authorization",
- "ahash",
- "arc-swap",
- "async-trait",
- "base64",
- "bytes",
- "const_format",
- "flate2",
- "flume",
- "futures",
- "git-version",
- "itertools 0.14.0",
- "json5",
- "lazy_static",
- "nonempty-collections",
- "once_cell",
- "petgraph",
- "phf",
- "rand 0.8.8",
- "rustc_version",
- "serde",
- "serde_json",
- "socket2 0.5.10",
- "tokio",
- "tokio-util",
- "tracing",
- "uhlc",
- "vec_map",
- "zenoh-buffers",
- "zenoh-codec",
- "zenoh-collections",
- "zenoh-config",
- "zenoh-core",
- "zenoh-keyexpr",
- "zenoh-link",
- "zenoh-link-commons",
- "zenoh-macros",
- "zenoh-protocol",
- "zenoh-result",
- "zenoh-runtime",
- "zenoh-sync",
- "zenoh-task",
- "zenoh-transport",
- "zenoh-util",
-]
-
-[[package]]
-name = "zenoh-buffers"
-version = "1.9.0"
-dependencies = [
- "zenoh-collections",
-]
-
-[[package]]
-name = "zenoh-codec"
-version = "1.9.0"
-dependencies = [
- "tracing",
- "uhlc",
- "zenoh-buffers",
- "zenoh-protocol",
-]
-
-[[package]]
-name = "zenoh-collections"
-version = "1.9.0"
-dependencies = [
- "ahash",
-]
-
-[[package]]
-name = "zenoh-config"
-version = "1.9.0"
-dependencies = [
- "json5",
- "nonempty-collections",
- "num_cpus",
- "secrecy",
- "serde",
- "serde_json",
- "serde_with",
- "serde_yaml",
- "toml 0.9.12+spec-1.1.0",
- "tracing",
- "uhlc",
- "validated_struct",
- "zenoh-core",
- "zenoh-keyexpr",
- "zenoh-macros",
- "zenoh-protocol",
- "zenoh-result",
- "zenoh-util",
-]
-
-[[package]]
-name = "zenoh-core"
-version = "1.9.0"
-dependencies = [
- "lazy_static",
- "tokio",
- "zenoh-result",
- "zenoh-runtime",
-]
-
-[[package]]
-name = "zenoh-crypto"
-version = "1.9.0"
-dependencies = [
- "aes",
- "hmac",
- "rand 0.8.8",
- "rand_chacha",
- "sha3",
- "zenoh-result",
-]
-
-[[package]]
 name = "zenoh-keyexpr"
 version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "80f04c82f0728f6704a1a397a04b38de5b2fd5a9a886a232cf650c9af294ba5d"
 dependencies = [
  "getrandom 0.2.17",
  "hashbrown 0.16.1",
@@ -5631,190 +5524,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "zenoh-link"
-version = "1.9.0"
-dependencies = [
- "zenoh-config",
- "zenoh-link-commons",
- "zenoh-link-quic",
- "zenoh-link-tcp",
- "zenoh-link-tls",
- "zenoh-link-udp",
- "zenoh-link-unixsock_stream",
- "zenoh-link-webtransport",
- "zenoh-protocol",
- "zenoh-result",
-]
-
-[[package]]
-name = "zenoh-link-commons"
-version = "1.9.0"
-dependencies = [
- "async-trait",
- "base64",
- "bytes",
- "flume",
- "futures",
- "quinn",
- "quinn-proto",
- "rcgen",
- "rustls",
- "rustls-pemfile",
- "rustls-pki-types",
- "rustls-webpki",
- "secrecy",
- "serde",
- "socket2 0.5.10",
- "time",
- "tokio",
- "tokio-util",
- "tracing",
- "webpki-roots",
- "x509-parser",
- "zenoh-buffers",
- "zenoh-codec",
- "zenoh-config",
- "zenoh-core",
- "zenoh-protocol",
- "zenoh-result",
- "zenoh-runtime",
- "zenoh-util",
-]
-
-[[package]]
-name = "zenoh-link-quic"
-version = "1.9.0"
-dependencies = [
- "async-trait",
- "rustls-webpki",
- "time",
- "tracing",
- "zenoh-core",
- "zenoh-link-commons",
- "zenoh-link-quic_datagram",
- "zenoh-protocol",
- "zenoh-result",
-]
-
-[[package]]
-name = "zenoh-link-quic_datagram"
-version = "1.9.0"
-dependencies = [
- "async-trait",
- "rustls-webpki",
- "time",
- "tokio-util",
- "tracing",
- "zenoh-core",
- "zenoh-link-commons",
- "zenoh-protocol",
- "zenoh-result",
-]
-
-[[package]]
-name = "zenoh-link-tcp"
-version = "1.9.0"
-dependencies = [
- "async-trait",
- "socket2 0.5.10",
- "tokio",
- "tokio-util",
- "tracing",
- "zenoh-config",
- "zenoh-core",
- "zenoh-link-commons",
- "zenoh-protocol",
- "zenoh-result",
-]
-
-[[package]]
-name = "zenoh-link-tls"
-version = "1.9.0"
-dependencies = [
- "async-trait",
- "base64",
- "rustls",
- "rustls-pemfile",
- "rustls-pki-types",
- "rustls-webpki",
- "secrecy",
- "socket2 0.5.10",
- "time",
- "tls-listener",
- "tokio",
- "tokio-rustls",
- "tokio-util",
- "tracing",
- "webpki-roots",
- "x509-parser",
- "zenoh-config",
- "zenoh-core",
- "zenoh-link-commons",
- "zenoh-protocol",
- "zenoh-result",
- "zenoh-runtime",
-]
-
-[[package]]
-name = "zenoh-link-udp"
-version = "1.9.0"
-dependencies = [
- "async-trait",
- "libc",
- "socket2 0.5.10",
- "tokio",
- "tokio-util",
- "tracing",
- "windows-sys 0.61.2",
- "zenoh-buffers",
- "zenoh-core",
- "zenoh-link-commons",
- "zenoh-link-quic_datagram",
- "zenoh-protocol",
- "zenoh-result",
- "zenoh-sync",
- "zenoh-util",
-]
-
-[[package]]
-name = "zenoh-link-unixsock_stream"
-version = "1.9.0"
-dependencies = [
- "async-trait",
- "nix",
- "tokio",
- "tokio-util",
- "tracing",
- "uuid",
- "zenoh-core",
- "zenoh-link-commons",
- "zenoh-protocol",
- "zenoh-result",
- "zenoh-runtime",
-]
-
-[[package]]
-name = "zenoh-link-webtransport"
-version = "1.9.0"
-dependencies = [
- "async-trait",
- "quinn",
- "rustls",
- "tokio",
- "tokio-util",
- "tracing",
- "url",
- "web-transport-quinn",
- "zenoh-core",
- "zenoh-link-commons",
- "zenoh-protocol",
- "zenoh-result",
- "zenoh-runtime",
-]
-
-[[package]]
 name = "zenoh-macros"
 version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9310b02a8f6dc4bd04d9ce6b318b9d00182aeeeeca60410003307d63a2569a3f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5823,120 +5536,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "zenoh-protocol"
-version = "1.9.0"
-dependencies = [
- "const_format",
- "rand 0.8.8",
- "serde",
- "uhlc",
- "zenoh-buffers",
- "zenoh-keyexpr",
- "zenoh-macros",
- "zenoh-result",
-]
-
-[[package]]
 name = "zenoh-result"
 version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cca8e65b08f211833fe31cf38d73a48c6e1d6d900914e1ddd8cb176b3355b75b"
 dependencies = [
  "anyhow",
-]
-
-[[package]]
-name = "zenoh-runtime"
-version = "1.9.0"
-dependencies = [
- "lazy_static",
- "ron",
- "serde",
- "tokio",
- "tracing",
- "zenoh-macros",
- "zenoh-result",
-]
-
-[[package]]
-name = "zenoh-sync"
-version = "1.9.0"
-dependencies = [
- "arc-swap",
- "event-listener",
- "futures",
- "tokio",
- "zenoh-buffers",
- "zenoh-collections",
- "zenoh-core",
-]
-
-[[package]]
-name = "zenoh-task"
-version = "1.9.0"
-dependencies = [
- "futures",
- "tokio",
- "tokio-util",
- "tracing",
- "zenoh-core",
- "zenoh-runtime",
-]
-
-[[package]]
-name = "zenoh-transport"
-version = "1.9.0"
-dependencies = [
- "async-trait",
- "crossbeam-utils",
- "flume",
- "futures",
- "lazy_static",
- "lz4_flex",
- "rand 0.8.8",
- "ringbuffer-spsc",
- "rsa",
- "serde",
- "sha3",
- "tokio",
- "tokio-util",
- "tracing",
- "zenoh-buffers",
- "zenoh-codec",
- "zenoh-config",
- "zenoh-core",
- "zenoh-crypto",
- "zenoh-link",
- "zenoh-link-commons",
- "zenoh-protocol",
- "zenoh-result",
- "zenoh-runtime",
- "zenoh-sync",
- "zenoh-task",
- "zenoh-util",
-]
-
-[[package]]
-name = "zenoh-util"
-version = "1.9.0"
-dependencies = [
- "async-trait",
- "const_format",
- "flume",
- "home",
- "humantime",
- "lazy_static",
- "libc",
- "libloading 0.8.9",
- "pnet_datalink",
- "schemars 1.2.2",
- "serde",
- "serde_json",
- "shellexpand",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "winapi",
- "zenoh-core",
- "zenoh-result",
 ]
 
 [[package]]

@@ -96,14 +96,12 @@ struct PlayView: View {
         .transition(.opacity)
     }
 
-    private func setting(_ title: String, detail: String?, isOn: Binding<Bool>) -> some View {
+    private func setting(_ title: String, detail: String, isOn: Binding<Bool>) -> some View {
         Button { isOn.wrappedValue.toggle() } label: {
             Toggle(isOn: isOn) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(.system(size: 15, weight: .medium)).foregroundStyle(Color.foreground)
-                    if let detail {
-                        Text(detail).font(.system(size: 12)).foregroundStyle(Color.muted)
-                    }
+                    Text(detail).font(.system(size: 12)).foregroundStyle(Color.muted)
                 }
             }
             .tint(Color.success)

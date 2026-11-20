@@ -73,7 +73,11 @@ pub fn forward_gamepads(robot: &Arc<RwLock<Robot>>) -> adamo::Result<()> {
     })
 }
 
-fn create_gamepad(index: u8, robot: &Arc<RwLock<Robot>>, active_rumbles: &ActiveRumbles) -> XboxOneJoypad {
+fn create_gamepad(
+    index: u8,
+    robot: &Arc<RwLock<Robot>>,
+    active_rumbles: &ActiveRumbles,
+) -> XboxOneJoypad {
     let definition =
         DeviceDefinition::new("Adamo virtual Xbox One pad", 0x045E, 0x02EA, 0x0408, "", "");
     let mut gamepad = XboxOneJoypad::new(&definition)
