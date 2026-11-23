@@ -37,6 +37,11 @@ pub fn video_format(keyframe: Vec<u8>) -> Option<VideoFormat> {
 }
 
 #[uniffi::export]
+pub fn fabric_now_us() -> u64 {
+    adamo::fabric_now_us()
+}
+
+#[uniffi::export]
 pub fn h264_length_prefixed(access_unit: Vec<u8>) -> Vec<u8> {
     h264::length_prefixed(&access_unit)
 }
@@ -63,6 +68,7 @@ impl From<adamo::Error> for PlayError {
 pub struct VideoFrame {
     pub data: Vec<u8>,
     pub is_keyframe: bool,
+    pub capture_time_us: u64,
 }
 
 #[derive(uniffi::Record)]
@@ -138,6 +144,7 @@ impl Connection {
         Ok(access_unit.map(|access_unit| VideoFrame {
             data: access_unit.payload,
             is_keyframe: access_unit.keyframe,
+            capture_time_us: access_unit.capture_time_us,
         }))
     }
 

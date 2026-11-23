@@ -20,7 +20,6 @@ use adamo::{AudioChannels, AudioOptions, ControlMessage, Robot, VideoOptions};
 use clap::Parser;
 
 const AUDIO_SINK: &str = "cloud_gaming_audio";
-const MONITOR_CAPTURE: &str = "\"props,stream.capture.sink=true\"";
 const GAMESCOPE_INPUT_SOCKET: &str = "gamescope-0-ei";
 
 #[derive(Parser)]
@@ -58,9 +57,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     start_audio_sink()?;
     let mut robot = open_robot(&args)?;
-    let audio_source = format!(
-        "pipewiresrc target-object={AUDIO_SINK} stream-properties={MONITOR_CAPTURE} ! audio/x-raw,channels=2"
-    );
+    let audio_source = format!("pulsesrc device={AUDIO_SINK}.monitor ! audio/x-raw,channels=2");
     let audio_options = AudioOptions {
         channels: AudioChannels::Stereo,
         bitrate_kbps: 128,
@@ -124,6 +121,9 @@ fn start_audio_sink() -> Result<(), Box<dyn Error>> {
             ])
             .status()?;
     }
+    Command::new("pactl")
+        .args(["set-default-sink", AUDIO_SINK])
+        .status()?;
     Ok(())
 }
 
@@ -152,15 +152,16 @@ fn watch_displays(
 impl Gamescope {
     fn start(args: &Args, (width, height): (u32, u32)) -> Result<Self, Box<dyn Error>> {
         let (width, height, fps) = (width.to_string(), height.to_string(), args.fps.to_string());
+        let is_steam = Path::new(&args.command[0]).ends_with("steam");
         let process = Command::new("systemd-inhibit")
             .args([
                 "--what=sleep:idle",
                 "--who=Adamo cloud gaming",
                 "--why=Streaming a game",
             ])
+            .arg("gamescope")
+            .args(is_steam.then_some("-e"))
             .args([
-                "gamescope",
-                "-e",
                 "--backend",
                 "headless",
                 "-W",
@@ -176,7 +177,6 @@ impl Gamescope {
                 "--",
             ])
             .args(&args.command)
-            .env("PULSE_SINK", AUDIO_SINK)
             .process_group(0)
             .spawn()?;
         let input_socket =
@@ -230,7 +230,6 @@ fn video_options(args: &Args, (width, height): (u32, u32)) -> VideoOptions {
         codec: args.codec.clone(),
         encoder: args.encoder.clone(),
         bitrate_kbps: args.bitrate_kbps,
-        rate_control: Some("cbr".into()),
         intra_refresh: false,
         keyframe_distance: 3600.0,
         ..VideoOptions::default().with_pixel_format("BGRX")

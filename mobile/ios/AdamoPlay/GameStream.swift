@@ -4,6 +4,8 @@ import UIKit
 import os
 
 private let receiveTimeoutMs: UInt32 = 100
+private let audioPrebufferSeconds = 0.06
+private let audioMaxQueuedSeconds = 0.15
 
 final class VideoView: UIView {
     override class var layerClass: AnyClass { AVSampleBufferDisplayLayer.self }
@@ -15,6 +17,8 @@ final class GameStream: ObservableObject {
     let gamepads: Gamepads
     let videoView = VideoView()
     @Published var error: String?
+    @Published var framesPerSecond = 0
+    @Published var latencyMs = 0
     private let isRunning = OSAllocatedUnfairLock(initialState: true)
     private let threads = DispatchGroup()
 
@@ -54,6 +58,9 @@ final class GameStream: ObservableObject {
     private func playVideo() throws {
         let renderer = videoView.displayLayer.sampleBufferRenderer
         var formatDescription: CMVideoFormatDescription?
+        var windowStart = ContinuousClock.now
+        var windowFrameCount = 0
+        var windowLatencyUs: Int64 = 0
         while shouldRun {
             guard let frame = try connection.receiveVideo(timeoutMs: receiveTimeoutMs) else { continue }
             if renderer.status == .failed {
@@ -70,6 +77,19 @@ final class GameStream: ObservableObject {
             let isH264 = CMFormatDescriptionGetMediaSubType(formatDescription) == kCMVideoCodecType_H264
             let sample = isH264 ? h264LengthPrefixed(accessUnit: frame.data) : frame.data
             renderer.enqueue(makeSampleBuffer(sample, isKeyframe: frame.isKeyframe, formatDescription))
+            windowFrameCount += 1
+            windowLatencyUs += Int64(fabricNowUs()) - Int64(frame.captureTimeUs)
+            if windowStart.duration(to: .now) >= .seconds(1) {
+                let framesPerSecond = windowFrameCount
+                let latencyMs = Int(windowLatencyUs / Int64(windowFrameCount) / 1000)
+                DispatchQueue.main.async {
+                    self.framesPerSecond = framesPerSecond
+                    self.latencyMs = latencyMs
+                }
+                windowStart = .now
+                windowFrameCount = 0
+                windowLatencyUs = 0
+            }
         }
     }
 
@@ -82,6 +102,8 @@ final class GameStream: ObservableObject {
         let player = AVAudioPlayerNode()
         engine.attach(player)
         var format: AVAudioFormat?
+        var queuedSampleCount = OSAllocatedUnfairLock(initialState: 0)
+        var pendingBuffers: [AVAudioPCMBuffer] = []
         while shouldRun {
             guard let frame = try connection.receiveAudio(timeoutMs: receiveTimeoutMs) else { continue }
             if format == nil {
@@ -91,8 +113,23 @@ final class GameStream: ObservableObject {
             if !engine.isRunning {
                 try engine.start()
                 player.play()
+                queuedSampleCount = OSAllocatedUnfairLock(initialState: 0)
             }
-            player.scheduleBuffer(makeAudioBuffer(frame, format!))
+            pendingBuffers.append(makeAudioBuffer(frame, format!))
+            let sampleRate = Double(frame.sampleRate)
+            let queuedSamples = queuedSampleCount.withLock { $0 }
+            let pendingSamples = pendingBuffers.reduce(0) { $0 + Int($1.frameLength) }
+            if queuedSamples == 0 && Double(pendingSamples) < audioPrebufferSeconds * sampleRate { continue }
+            if Double(queuedSamples) > audioMaxQueuedSeconds * sampleRate {
+                pendingBuffers.removeAll()
+                continue
+            }
+            for buffer in pendingBuffers {
+                let sampleCount = Int(buffer.frameLength)
+                queuedSampleCount.withLock { $0 += sampleCount }
+                player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [queuedSampleCount] _ in queuedSampleCount.withLock { $0 -= sampleCount } }
+            }
+            pendingBuffers.removeAll()
         }
         engine.stop()
     }

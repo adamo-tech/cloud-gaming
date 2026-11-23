@@ -33,7 +33,7 @@ pub fn forward_gamepads(robot: &Arc<RwLock<Robot>>) -> adamo::Result<()> {
     let thread_robot = robot.clone();
     std::thread::spawn(move || {
         let active_rumbles = ActiveRumbles::default();
-        let mut gamepads = HashMap::new();
+        let mut gamepads = HashMap::from([(0, create_gamepad(0, &thread_robot, &active_rumbles))]);
         let mut last_refresh = Instant::now();
         loop {
             match joy_receiver.recv_timeout(RUMBLE_REFRESH) {
@@ -116,7 +116,7 @@ fn apply_joy(gamepad: &XboxOneJoypad, joy: &Joy) {
 }
 
 fn magnitude(level: i32) -> f32 {
-    (level as f32 / 65535.0).min(1.0)
+    (level.unsigned_abs() as f32 / 65535.0).min(1.0)
 }
 
 fn stick(value: f64) -> i16 {
