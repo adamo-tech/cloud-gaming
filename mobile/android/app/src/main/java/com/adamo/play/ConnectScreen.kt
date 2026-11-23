@@ -5,9 +5,11 @@ import android.graphics.Rect
 import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,6 +31,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
@@ -49,13 +52,22 @@ import uniffi.adamo_play.PlayException
 fun ConnectScreen(preferences: SharedPreferences, tabletopFold: Rect?, onConnect: (Connection) -> Unit) {
     var address by remember { mutableStateOf(preferences.getString("address", "")!!) }
     var pairingKey by remember { mutableStateOf(preferences.getString("pairingKey", "")!!) }
+    var isThroughRelay by remember { mutableStateOf(preferences.getBoolean("isThroughRelay", false)) }
+    var hostName by remember { mutableStateOf(preferences.getString("hostName", "")!!) }
+    var apiKey by remember { mutableStateOf(preferences.getString("apiKey", "")!!) }
     var isConnecting by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val windowManager = LocalContext.current.getSystemService(WindowManager::class.java)
 
     val play: () -> Unit = {
-        preferences.edit().putString("address", address).putString("pairingKey", pairingKey).apply()
+        preferences.edit()
+            .putString("address", address)
+            .putString("pairingKey", pairingKey)
+            .putBoolean("isThroughRelay", isThroughRelay)
+            .putString("hostName", hostName)
+            .putString("apiKey", apiKey)
+            .apply()
         isConnecting = true
         error = null
         val window = windowManager.currentWindowMetrics.bounds
@@ -63,7 +75,15 @@ fun ConnectScreen(preferences: SharedPreferences, tabletopFold: Rect?, onConnect
         val videoHeight = tabletopFold?.top ?: window.height()
         scope.launch {
             try {
-                onConnect(withContext(Dispatchers.IO) { Connection.connect(address, pairingKey, maxOf(videoWidth, videoHeight).toUInt(), minOf(videoWidth, videoHeight).toUInt()) })
+                val screenWidth = maxOf(videoWidth, videoHeight).toUInt()
+                val screenHeight = minOf(videoWidth, videoHeight).toUInt()
+                onConnect(withContext(Dispatchers.IO) {
+                    if (isThroughRelay) {
+                        Connection.connectThroughRelay(apiKey, hostName, screenWidth, screenHeight)
+                    } else {
+                        Connection.connect(address, pairingKey, screenWidth, screenHeight)
+                    }
+                })
             } catch (exception: PlayException) {
                 error = exception.message
             }
@@ -80,16 +100,43 @@ fun ConnectScreen(preferences: SharedPreferences, tabletopFold: Rect?, onConnect
                 Text("Play the games on your PC from anywhere, with a controller or the touch screen.", color = Palette.muted, fontSize = 16.sp)
             }
             Column(Modifier.width(360.dp).glass(RoundedCornerShape(20.dp)).padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Field("Gaming PC", address, { address = it }, "192.168.1.20:17447", KeyboardType.Uri)
-                Field("Pairing key", pairingKey, { pairingKey = it }, "Printed by the host", KeyboardType.Password, PasswordVisualTransformation())
+                ConnectionPicker(isThroughRelay) { isThroughRelay = it }
+                if (isThroughRelay) {
+                    Field("Gaming PC", hostName, { hostName = it }, "cloud-gaming", KeyboardType.Ascii)
+                    Field("API key", apiKey, { apiKey = it }, "From your Adamo organization", KeyboardType.Password, PasswordVisualTransformation())
+                } else {
+                    Field("Gaming PC", address, { address = it }, "192.168.1.20:17447", KeyboardType.Uri)
+                    Field("Pairing key", pairingKey, { pairingKey = it }, "Printed by the host", KeyboardType.Password, PasswordVisualTransformation())
+                }
                 error?.let { Text(it, color = Palette.danger, fontSize = 13.sp) }
-                FilledButton(play, Modifier.padding(top = 4.dp), isEnabled = address.isNotEmpty() && pairingKey.isNotEmpty() && !isConnecting) {
+                FilledButton(play, Modifier.padding(top = 4.dp), isEnabled = (if (isThroughRelay) hostName.isNotEmpty() && apiKey.isNotEmpty() else address.isNotEmpty() && pairingKey.isNotEmpty()) && !isConnecting) {
                     if (isConnecting) {
                         CircularProgressIndicator(Modifier.size(20.dp), color = Palette.background, strokeWidth = 2.dp)
                     } else {
                         Text("Play")
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConnectionPicker(isThroughRelay: Boolean, onChange: (Boolean) -> Unit) {
+    val shape = RoundedCornerShape(10.dp)
+    Row(Modifier.fillMaxWidth().height(36.dp).background(Color.White.copy(alpha = 0.04f), shape).border(1.dp, Palette.glassBorder, shape).padding(2.dp)) {
+        for ((label, isRelayOption) in listOf("Local network" to false, "Adamo relay" to true)) {
+            val isSelected = isRelayOption == isThroughRelay
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isSelected) Color.White.copy(alpha = 0.14f) else Color.Transparent)
+                    .clickable { onChange(isRelayOption) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(label, color = if (isSelected) Palette.foreground else Palette.muted, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             }
         }
     }

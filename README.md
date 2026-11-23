@@ -74,6 +74,7 @@ The host waits for a player before it starts gamescope, at that player's screen 
 | `--mouse-smoothing-ms` | `8` | Spreads mouse motion over this many milliseconds; `0` turns it off |
 | `--pairing-key-file` | `pairing-key` | Where the pairing key is saved |
 | `--name` | `cloud-gaming` | The host's name, shown in the browser player |
+| `--experimental` | `true` | The Adamo SDK's experimental mode, turn off if you observe latency issues |
 
 ## Play in a browser
 
@@ -167,12 +168,23 @@ A PS5 on the same network as the gaming PC can be played from any player: [chiak
 
 ## Play away from home
 
-To play outside your home network, put both devices on [Tailscale](https://tailscale.com) and use the PC's Tailscale address, or forward port 17447 on your router to the PC.
+To play outside your home network, forward port 17447, TCP and UDP, on your router to the gaming PC, and connect the player to your home's public address. If the PC sits behind two routers, forward the port on both. Allow the port from anywhere on the PC too, for example with `sudo ufw allow 17447`; the pairing key still decides who gets in.
+
+## Use Adamo's relays
+
+You can also connect through Adamo's relays. Sign up at [operate.adamohq.com](https://operate.adamohq.com), go to Settings, API Keys, and create a key (it starts with `ak_`). Start the host with it:
+
+```
+ADAMO_API_KEY=<API key> cargo run --release -- -- steam -gamepadui
+```
+
+In the player, pick Adamo relay and enter the host's name (`--name`, `cloud-gaming` by default) and the API key. The player still connects directly when it can reach the PC, and goes through the relay otherwise.
 
 ## Tips
 
 - **Older GPUs and iPhones:** `--codec h264` works on far more hardware than AV1.
 - **Stutter on iPhone:** turn off AirDrop (Control Center, AirDrop, Receiving Off) and Handoff (Settings, General, AirPlay & Continuity). While they are on, the iPhone's Wi-Fi leaves your network for about 100 ms roughly once a second, which freezes the video.
+- **High or jumpy latency:** try `--experimental false`, which turns off the SDK's experimental BBRv3 congestion control.
 - **Stuttering mouse-look:** a 125 Hz mouse sends two or three reports per frame, so the host smooths motion over 8 ms by default. With a 500 Hz or faster gaming mouse, `--mouse-smoothing-ms 0` sends every report as it arrives, with no added latency.
 - **Changing screens:** reconnecting from the same screen keeps the game running. A player with a different screen size restarts gamescope at the new size, which closes the game.
 - **One player at a time:** the host is built for a single player.
