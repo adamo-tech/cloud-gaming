@@ -19,7 +19,7 @@ const GAMEPAD_INDICES = [0, 1, 2, 3];
 
 type PlayerProps = {
   robot: string;
-  audioSession: ComponentProps<typeof AdamoProvider>["session"];
+  audioSession?: ComponentProps<typeof AdamoProvider>["session"];
   onExit: () => void;
 };
 
@@ -49,15 +49,18 @@ export function Player({ robot, audioSession, onExit }: PlayerProps) {
       <Stream
         robot={robot}
         track="screen"
-        videoCodec="av1"
         jitterMaxMs={0}
         robotOnline={isOnline}
         onStats={setStats}
         style={{ width: "100%", height: "100%" }}
       />
-      <AdamoProvider session={audioSession} org={org}>
+      {audioSession ? (
+        <AdamoProvider session={audioSession} org={org}>
+          <AudioStream robot={robot} track="audio" />
+        </AdamoProvider>
+      ) : (
         <AudioStream robot={robot} track="audio" />
-      </AdamoProvider>
+      )}
       {org &&
         GAMEPAD_INDICES.map((index) => (
           <GamepadController

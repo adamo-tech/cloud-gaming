@@ -5,6 +5,9 @@ struct ConnectView: View {
     let onConnect: (Connection) -> Void
     @AppStorage("address") private var address = ""
     @AppStorage("pairingKey") private var pairingKey = ""
+    @AppStorage("isThroughRelay") private var isThroughRelay = false
+    @AppStorage("hostName") private var hostName = ""
+    @AppStorage("apiKey") private var apiKey = ""
     @State private var isConnecting = false
     @State private var error: String?
     @State private var isPairingKeyVisible = false
@@ -36,25 +39,30 @@ struct ConnectView: View {
 
     private var form: some View {
         VStack(alignment: .leading, spacing: 16) {
+            Picker("Connection", selection: $isThroughRelay) {
+                Text("Local network").tag(false)
+                Text("Adamo relay").tag(true)
+            }
+            .pickerStyle(.segmented)
             field("Gaming PC") {
-                TextField("", text: $address, prompt: Text("192.168.1.20:17447").foregroundStyle(Color.muted.opacity(0.6)))
-                    .keyboardType(.numbersAndPunctuation)
+                TextField("", text: isThroughRelay ? $hostName : $address, prompt: Text(isThroughRelay ? "cloud-gaming" : "192.168.1.20:17447").foregroundStyle(Color.muted.opacity(0.6)))
+                    .keyboardType(isThroughRelay ? .asciiCapable : .numbersAndPunctuation)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .focused($focusedField, equals: .address)
                     .submitLabel(.next)
                     .onSubmit { focusedField = .pairingKey }
             }
-            field("Pairing key") {
+            field(isThroughRelay ? "API key" : "Pairing key") {
                 HStack(spacing: 8) {
                     Group {
                         if isPairingKeyVisible {
-                            TextField("", text: $pairingKey, prompt: pairingKeyPrompt)
+                            TextField("", text: key, prompt: keyPrompt)
                                 .font(.system(size: 14, design: .monospaced))
                                 .textInputAutocapitalization(.never)
                                 .autocorrectionDisabled()
                         } else {
-                            SecureField("", text: $pairingKey, prompt: pairingKeyPrompt)
+                            SecureField("", text: key, prompt: keyPrompt)
                         }
                     }
                     .focused($focusedField, equals: .pairingKey)
@@ -76,7 +84,7 @@ struct ConnectView: View {
                 }
             }
             .buttonStyle(PrimaryButtonStyle())
-            .disabled(address.isEmpty || pairingKey.isEmpty || isConnecting)
+            .disabled((isThroughRelay ? hostName.isEmpty || apiKey.isEmpty : address.isEmpty || pairingKey.isEmpty) || isConnecting)
             .padding(.top, 4)
         }
         .padding(24)
@@ -84,8 +92,12 @@ struct ConnectView: View {
         .glass(cornerRadius: 20)
     }
 
-    private var pairingKeyPrompt: Text {
-        Text("Printed by the host").foregroundStyle(Color.muted.opacity(0.6))
+    private var key: Binding<String> {
+        isThroughRelay ? $apiKey : $pairingKey
+    }
+
+    private var keyPrompt: Text {
+        Text(isThroughRelay ? "From your Adamo organization" : "Printed by the host").foregroundStyle(Color.muted.opacity(0.6))
     }
 
     private func field(_ label: String, @ViewBuilder input: () -> some View) -> some View {
@@ -105,8 +117,11 @@ struct ConnectView: View {
         focusedField = nil
         isConnecting = true
         error = nil
+        let isThroughRelay = isThroughRelay
         let address = address
         let pairingKey = pairingKey
+        let hostName = hostName
+        let apiKey = apiKey
         let window = UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first!
         let scale = window.traitCollection.displayScale
         let videoSize = CGSize(width: window.bounds.width * scale, height: (tabletopFold?.minY ?? window.bounds.height) * scale)
@@ -114,7 +129,11 @@ struct ConnectView: View {
         let screenHeight = UInt32(min(videoSize.width, videoSize.height))
         Task {
             do {
-                let connection = try await Task.detached { try Connection.connect(address: address, pairingKey: pairingKey, screenWidth: screenWidth, screenHeight: screenHeight) }.value
+                let connection = try await Task.detached {
+                    isThroughRelay
+                        ? try Connection.connectThroughRelay(apiKey: apiKey, hostName: hostName, screenWidth: screenWidth, screenHeight: screenHeight)
+                        : try Connection.connect(address: address, pairingKey: pairingKey, screenWidth: screenWidth, screenHeight: screenHeight)
+                }.value
                 onConnect(connection)
             } catch let PlayError.Failed(message) {
                 error = message
