@@ -52,6 +52,7 @@ cargo run --release -- -- steam -gamepadui
 ```
 
 Everything after the second `--` is the game command, so you can launch any game or launcher, not only Steam.
+When the command is `steam`, gamescope runs in Steam mode (`-e`) and Steam picks the window to stream. Any other command streams its own window.
 
 The host prints a line like:
 
@@ -122,7 +123,7 @@ To run on your iPhone, pick it as the run destination and set your team under Si
 Enter the gaming PC's address and the pairing key, and tap Play. The app remembers both.
 
 - Pair a Bluetooth controller in the phone's settings, or play with the on-screen controller, which shows while no controller is connected.
-- Hold anywhere on the screen for the menu: turn the on-screen controller on or off, turn phone vibration on or off, or disconnect.
+- Hold anywhere on the screen for the menu: turn the on-screen controller on or off, turn phone vibration on or off, show the frame rate and latency, or disconnect.
 - Controller rumble plays on the controller, or on the phone when you play with the on-screen controller.
 - On a foldable held half open, the game sits above the hinge and the controller below it.
 
@@ -133,6 +134,7 @@ To play outside your home network, put both devices on [Tailscale](https://tails
 ## Tips
 
 - **Older GPUs and iPhones:** `--codec h264` works on far more hardware than AV1.
+- **Stutter on iPhone:** turn off AirDrop (Control Center, AirDrop, Receiving Off) and Handoff (Settings, General, AirPlay & Continuity). While they are on, the iPhone's Wi-Fi leaves your network for about 100 ms roughly once a second, which freezes the video.
 - **Stuttering mouse-look:** a 125 Hz mouse sends two or three reports per frame, so the host smooths motion over 8 ms by default. With a 500 Hz or faster gaming mouse, `--mouse-smoothing-ms 0` sends every report as it arrives, with no added latency.
 - **Changing screens:** reconnecting from the same screen keeps the game running. A player with a different screen size restarts gamescope at the new size, which closes the game.
 - **One player at a time:** the host is built for a single player.

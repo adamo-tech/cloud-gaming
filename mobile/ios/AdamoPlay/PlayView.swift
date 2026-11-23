@@ -7,6 +7,7 @@ struct PlayView: View {
     let onExit: () -> Void
     @State private var showsTouchControls = true
     @AppStorage(phoneVibrationKey) private var isPhoneVibrationEnabled = true
+    @AppStorage("showsMetrics") private var showsMetrics = false
     @State private var isMenuOpen = false
     @State private var showsHint = true
 
@@ -45,6 +46,17 @@ struct PlayView: View {
                     .transition(.opacity)
                     .allowsHitTesting(false)
             }
+            if showsMetrics {
+                Text("\(stream.framesPerSecond) fps · \(stream.latencyMs) ms")
+                    .font(.system(size: 13, weight: .medium).monospacedDigit())
+                    .foregroundStyle(Color.foreground)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .glass(cornerRadius: 999)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .padding(12)
+                    .allowsHitTesting(false)
+            }
             if isMenuOpen {
                 menu
             }
@@ -76,6 +88,8 @@ struct PlayView: View {
                     setting("Touch controls", detail: "Turn off when a controller connects", isOn: $showsTouchControls)
                     Divider().overlay(Color.glassBorder)
                     setting("Phone vibration", detail: "Rumble on the phone when no controller is connected", isOn: $isPhoneVibrationEnabled)
+                    Divider().overlay(Color.glassBorder)
+                    setting("Show metrics", detail: "Frame rate and latency from the gaming PC", isOn: $showsMetrics)
                 }
                 .padding(.horizontal, 16)
                 .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
