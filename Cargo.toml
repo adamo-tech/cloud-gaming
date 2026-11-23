@@ -6,7 +6,7 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
-adamo = { version = "1.0.31", features = ["video", "audio", "gstreamer", "google-bbr3"] }
+adamo = { version = "1.0.32", features = ["video", "audio", "gstreamer", "google-bbr3"] }
 clap = { version = "4", features = ["derive"] }
 gstreamer = "0.23"
 gstreamer-app = "0.23"

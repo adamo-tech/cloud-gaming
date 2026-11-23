@@ -4,9 +4,9 @@ version = 4
 
 [[package]]
 name = "adamo"
-version = "1.0.31"
+version = "1.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0eec303555c4e192a8844958ee94a335046cd15ea24e6513e3be2ef75ef257f8"
+checksum = "bc28c078de4c47c8ff317d8d8a40ccb79a9f312f37f54cf69c782f518ee3071e"
 dependencies = [
  "adamo-quinn",
  "adamo-quinn-proto",
@@ -76,9 +76,9 @@ dependencies = [
 
 [[package]]
 name = "adamo-quinn"
-version = "0.11.11-adamo.1.0.31"
+version = "0.11.11-adamo.1.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f3bbe000c5f3f97f0105ef04b12cfd0c4b27cb6a837d4d8db5beddd4f7d6793"
+checksum = "ce34937016432874ee8d809872e089880b16ab03758200d474b6232ae7e43637"
 dependencies = [
  "adamo-quinn-proto",
  "bytes",
@@ -96,9 +96,9 @@ dependencies = [
 
 [[package]]
 name = "adamo-quinn-proto"
-version = "0.11.17-adamo.1.0.31"
+version = "0.11.17-adamo.1.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2890d882c5ce0cf8c1c99050908faf9a386abe79e50c17a655d987ed355068a"
+checksum = "1c0bf7d026708d9a8c49932ebc348089873e9ca1fa526ef3a90bbf535c8d88bd"
 dependencies = [
  "bytes",
  "fastbloom",
@@ -123,9 +123,9 @@ dependencies = [
 
 [[package]]
 name = "adamo-web-transport-quinn"
-version = "0.12.1-adamo.1.0.31"
+version = "0.12.1-adamo.1.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e46a0ea9f9b3ef80b5e166588b47a7eb3c0758fe4eb8d81c2d024b9d48dcecad"
+checksum = "432077016ced3b53df8eda5d88e82e96f646a225fe473e00f9a220a45fd841cf"
 dependencies = [
  "adamo-quinn",
  "bytes",
@@ -144,9 +144,9 @@ dependencies = [
 
 [[package]]
 name = "adamo-zenoh"
-version = "1.9.0-adamo.1.0.31"
+version = "1.9.0-adamo.1.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24b6d39171e2e0cfdbf328ce739b7adb6ef668d3342f59ed962e644c542c2a17"
+checksum = "ef6e1e04abedfc2f8d267da1b3bc2d9ef0e8108fe4bf8260998c627c62f8a148"
 dependencies = [
  "adamo-quinn",
  "adamo-quinn-proto",
