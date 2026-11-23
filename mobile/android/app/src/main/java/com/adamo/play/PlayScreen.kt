@@ -51,6 +51,9 @@ fun PlayScreen(stream: GameStream, gamepads: Gamepads, tabletopFold: Rect?, onEx
     val videoAspectRatio by stream.videoAspectRatio
     val error by stream.error
     val hasPhysicalGamepad by gamepads.hasPhysicalGamepad
+    val showsMetrics by gamepads.showsMetrics
+    val framesPerSecond by stream.framesPerSecond
+    val latencyMs by stream.latencyMs
     var showsTouchControls by remember { mutableStateOf(true) }
     var isMenuOpen by remember { mutableStateOf(false) }
     var showsHint by remember { mutableStateOf(true) }
@@ -82,6 +85,15 @@ fun PlayScreen(stream: GameStream, gamepads: Gamepads, tabletopFold: Rect?, onEx
                 fontWeight = FontWeight.Medium,
             )
         }
+        if (showsMetrics) {
+            Text(
+                "$framesPerSecond fps · $latencyMs ms",
+                Modifier.align(Alignment.BottomEnd).padding(12.dp).glass(CircleShape).padding(horizontal = 14.dp, vertical = 8.dp),
+                color = Palette.foreground,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+            )
+        }
         if (isMenuOpen) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)).pointerInput(Unit) { detectTapGestures { isMenuOpen = false } })
             Menu(
@@ -105,6 +117,8 @@ private fun Menu(
     onExit: () -> Unit,
 ) {
     val isPhoneVibrationEnabled by gamepads.isPhoneVibrationEnabled
+    val hasPlayStationLabels by gamepads.hasPlayStationLabels
+    val showsMetrics by gamepads.showsMetrics
     val sectionShape = RoundedCornerShape(14.dp)
     Column(
         Modifier.width(420.dp).glass(RoundedCornerShape(22.dp)).pointerInput(Unit) {}.padding(24.dp),
@@ -121,6 +135,10 @@ private fun Menu(
             Setting("Touch controls", "Turn off when a controller connects", showsTouchControls, onTouchControlsChange)
             HorizontalDivider(color = Palette.glassBorder)
             Setting("Phone vibration", "Rumble on the phone when no controller is connected", isPhoneVibrationEnabled, gamepads::setPhoneVibrationEnabled)
+            HorizontalDivider(color = Palette.glassBorder)
+            Setting("PlayStation buttons", "Label the on-screen buttons with shapes and L1, R1", hasPlayStationLabels, gamepads::setPlayStationLabels)
+            HorizontalDivider(color = Palette.glassBorder)
+            Setting("Show metrics", "Frame rate and latency from the gaming PC", showsMetrics, gamepads::setShowsMetrics)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             FilledButton(onExit, Modifier.weight(1f), containerColor = Palette.danger.copy(alpha = 0.12f), contentColor = Palette.danger) { Text("Disconnect") }
@@ -132,7 +150,7 @@ private fun Menu(
 @Composable
 private fun Setting(title: String, detail: String, isOn: Boolean, onChange: (Boolean) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().toggleable(isOn, role = Role.Switch, onValueChange = onChange).padding(vertical = 12.dp),
+        Modifier.fillMaxWidth().toggleable(isOn, role = Role.Switch, onValueChange = onChange).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {

@@ -62,7 +62,7 @@ Connect from the player to this PC's address, port 17447, with pairing key <key>
 
 The pairing key is what lets a player in. The host saves it to `pairing-key` (readable only by you) and reuses it on every start, so you pair each player once. To revoke every player, stop the host, delete `pairing-key` and start it again: it prints a new key.
 
-The host waits for a player before it starts gamescope, at that player's screen size. It keeps the PC awake while a game is streaming.
+The host waits for a player before it starts gamescope, at that player's screen size. It keeps the PC awake while a game is streaming, and makes Cloud-Gaming the PC's default sound output so every game's sound goes to the player. After you stop the host, pick your speakers again in the desktop's sound settings.
 
 | Option | Default | What it does |
 | --- | --- | --- |
@@ -123,9 +123,47 @@ To run on your iPhone, pick it as the run destination and set your team under Si
 Enter the gaming PC's address and the pairing key, and tap Play. The app remembers both.
 
 - Pair a Bluetooth controller in the phone's settings, or play with the on-screen controller, which shows while no controller is connected.
-- Hold anywhere on the screen for the menu: turn the on-screen controller on or off, turn phone vibration on or off, show the frame rate and latency, or disconnect.
+- Hold anywhere on the screen for the menu: turn the on-screen controller on or off, turn phone vibration on or off, switch the on-screen buttons to PlayStation labels, show the frame rate and latency, or disconnect.
 - Controller rumble plays on the controller, or on the phone when you play with the on-screen controller.
 - On a foldable held half open, the game sits above the hinge and the controller below it.
+
+## PS5 Remote Play
+
+A PS5 on the same network as the gaming PC can be played from any player: [chiaki-ng](https://github.com/streetpea/chiaki-ng) runs as the game and streams the PS5 over Remote Play, and the host streams chiaki-ng to the player.
+
+1. On the PS5, turn on Settings, System, Remote Play, Enable Remote Play. To wake the PS5 from rest mode, also turn on Settings, System, Power Saving, Features Available in Rest Mode, Stay Connected to the Internet and Enable Turning On PS5 from Network.
+2. Install chiaki-ng and xclip on the gaming PC:
+
+   ```
+   flatpak install flathub io.github.streetpea.Chiaki4deck
+   sudo apt install xclip
+   ```
+
+3. Start the host with chiaki-ng as the game. `--nosocket=wayland` keeps chiaki-ng inside gamescope instead of the desktop:
+
+   ```
+   cargo run --release -- -- flatpak run --socket=x11 --nosocket=wayland --env=SDL_AUDIODRIVER=pulseaudio io.github.streetpea.Chiaki4deck
+   ```
+
+4. Connect from a player. In chiaki-ng's settings, sign in to PSN so chiaki-ng gets your account ID. The player doesn't share its clipboard with the PC, so move the two links with xclip in an SSH session on the PC. First point xclip at gamescope's display:
+
+   ```
+   export DISPLAY=:$(ls -t /tmp/.X11-unix | head -1 | tr -d X)
+   ```
+
+   Click "Click to Re-Copy URL" in chiaki-ng, then print the login link and open it in a browser on your computer:
+
+   ```
+   xclip -o -selection clipboard
+   ```
+
+   After you sign in, the browser lands on an address starting with `https://remoteplay.dl.playstation.net/remoteplay/redirect?code=`. The page may look blank. Copy the whole address, put it on the PC's clipboard, and click "Click to Paste URL" in chiaki-ng:
+
+   ```
+   echo '<redirect address>' | setsid xclip -i -selection clipboard
+   ```
+
+5. chiaki-ng finds the PS5 on the network. Pick it, and enter the code the PS5 shows under Settings, System, Remote Play, Link Device. You register once; afterwards, pick the PS5 to play.
 
 ## Play away from home
 

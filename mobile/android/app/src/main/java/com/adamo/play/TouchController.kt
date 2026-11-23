@@ -48,15 +48,18 @@ import androidx.compose.ui.unit.sp
 private val BUTTON_SIZE = 44.dp
 private val STICK_SIZE = 116.dp
 private val RAISE = 72.dp
+private val STICK_BUTTON_SIZE = 34.dp
+private val STICK_BUTTON_SPACING = 10.dp
 private val IDLE_FILL = Color.White.copy(alpha = 0.1f)
 private val IDLE_STROKE = Color.White.copy(alpha = 0.22f)
 private val IDLE_CONTENT = Color.White.copy(alpha = 0.9f)
 
-private enum class Glyph(val degrees: Float) { Up(0f), Right(90f), Down(180f), Left(270f), View(0f), Menu(0f) }
+private enum class Glyph(val degrees: Float) { Up(0f), Right(90f), Down(180f), Left(270f), View(0f), Menu(0f), Triangle(0f), Square(0f), Circle(0f), XMark(0f) }
 
 @Composable
 fun TouchController(gamepads: Gamepads, modifier: Modifier = Modifier, isStacked: Boolean = false) {
     val gamepad = gamepads.virtualGamepad
+    val hasPlayStationLabels by gamepads.hasPlayStationLabels
 
     fun button(index: Int): (Boolean) -> Unit = { isPressed ->
         gamepad.buttons[index] = if (isPressed) 1 else 0
@@ -75,6 +78,10 @@ fun TouchController(gamepads: Gamepads, modifier: Modifier = Modifier, isStacked
         gamepads.sendVirtual()
     }
 
+    val faceButton = @Composable { xbox: String, playStation: Glyph, index: Int ->
+        if (hasPlayStationLabels) GlyphButton(playStation, button(index)) else LabelButton(xbox, button(index))
+    }
+
     val menuButtons = @Composable {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             GlyphButton(Glyph.View, button(8), 36.dp)
@@ -86,8 +93,8 @@ fun TouchController(gamepads: Gamepads, modifier: Modifier = Modifier, isStacked
     Column(modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Shoulder("LT", trigger(6, LEFT_TRIGGER_AXIS))
-                Shoulder("LB", button(4))
+                Shoulder(if (hasPlayStationLabels) "L2" else "LT", trigger(6, LEFT_TRIGGER_AXIS))
+                Shoulder(if (hasPlayStationLabels) "L1" else "LB", button(4))
             }
             Spacer(Modifier.weight(1f))
             if (isStacked) {
@@ -95,14 +102,21 @@ fun TouchController(gamepads: Gamepads, modifier: Modifier = Modifier, isStacked
                 Spacer(Modifier.weight(1f))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Shoulder("RB", button(5))
-                Shoulder("RT", trigger(7, RIGHT_TRIGGER_AXIS))
+                Shoulder(if (hasPlayStationLabels) "R1" else "RB", button(5))
+                Shoulder(if (hasPlayStationLabels) "R2" else "RT", trigger(7, RIGHT_TRIGGER_AXIS))
             }
         }
         Spacer(Modifier.weight(1f))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                Stick(stick(0), Modifier.padding(bottom = RAISE))
+                Column(
+                    Modifier.padding(bottom = RAISE - STICK_BUTTON_SPACING - STICK_BUTTON_SIZE),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(STICK_BUTTON_SPACING),
+                ) {
+                    Stick(stick(0))
+                    StickButton("L3", button(10))
+                }
                 Cross(
                     top = { GlyphButton(Glyph.Up, button(12), cornerRadius = 10.dp) },
                     left = { GlyphButton(Glyph.Left, button(14), cornerRadius = 10.dp) },
@@ -116,13 +130,16 @@ fun TouchController(gamepads: Gamepads, modifier: Modifier = Modifier, isStacked
                 Spacer(Modifier.weight(1f))
             }
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                Stick(stick(2))
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(STICK_BUTTON_SPACING)) {
+                    StickButton("R3", button(11))
+                    Stick(stick(2))
+                }
                 Box(Modifier.padding(bottom = RAISE)) {
                     Cross(
-                        top = { LabelButton("Y", button(3)) },
-                        left = { LabelButton("X", button(2)) },
-                        right = { LabelButton("B", button(1)) },
-                        bottom = { LabelButton("A", button(0)) },
+                        top = { faceButton("Y", Glyph.Triangle, 3) },
+                        left = { faceButton("X", Glyph.Square, 2) },
+                        right = { faceButton("B", Glyph.Circle, 1) },
+                        bottom = { faceButton("A", Glyph.XMark, 0) },
                     )
                 }
             }
@@ -150,6 +167,11 @@ private fun Cross(
 @Composable
 private fun Shoulder(label: String, onPressedChange: (Boolean) -> Unit) {
     PadButton(onPressedChange, width = 68.dp, height = 38.dp) { Label(label, it, 14.sp) }
+}
+
+@Composable
+private fun StickButton(label: String, onPressedChange: (Boolean) -> Unit) {
+    PadButton(onPressedChange, STICK_BUTTON_SIZE) { Label(label, it, 13.sp) }
 }
 
 @Composable
@@ -254,6 +276,21 @@ private fun DrawScope.drawGlyph(glyph: Glyph, color: Color) {
         }
         Glyph.Menu -> for (y in listOf(-0.6f, 0f, 0.6f)) {
             drawLine(color, center + Offset(-unit * 0.8f, unit * y), center + Offset(unit * 0.8f, unit * y), stroke.width, StrokeCap.Round)
+        }
+        Glyph.Triangle -> {
+            val triangle = Path().apply {
+                moveTo(center.x, center.y - unit * 0.8f)
+                lineTo(center.x + unit * 0.85f, center.y + unit * 0.65f)
+                lineTo(center.x - unit * 0.85f, center.y + unit * 0.65f)
+                close()
+            }
+            drawPath(triangle, color, style = stroke)
+        }
+        Glyph.Square -> drawRect(color, center - Offset(unit * 0.7f, unit * 0.7f), Size(unit * 1.4f, unit * 1.4f), style = stroke)
+        Glyph.Circle -> drawCircle(color, unit * 0.8f, center, style = stroke)
+        Glyph.XMark -> {
+            drawLine(color, center + Offset(-unit * 0.7f, -unit * 0.7f), center + Offset(unit * 0.7f, unit * 0.7f), stroke.width, StrokeCap.Round)
+            drawLine(color, center + Offset(unit * 0.7f, -unit * 0.7f), center + Offset(-unit * 0.7f, unit * 0.7f), stroke.width, StrokeCap.Round)
         }
         else -> rotate(glyph.degrees) {
             val chevron = Path().apply {

@@ -8,6 +8,7 @@ struct PlayView: View {
     @State private var showsTouchControls = true
     @AppStorage(phoneVibrationKey) private var isPhoneVibrationEnabled = true
     @AppStorage("showsMetrics") private var showsMetrics = false
+    @AppStorage(playStationLabelsKey) private var hasPlayStationLabels = false
     @State private var isMenuOpen = false
     @State private var showsHint = true
 
@@ -89,6 +90,8 @@ struct PlayView: View {
                     Divider().overlay(Color.glassBorder)
                     setting("Phone vibration", detail: "Rumble on the phone when no controller is connected", isOn: $isPhoneVibrationEnabled)
                     Divider().overlay(Color.glassBorder)
+                    setting("PlayStation buttons", detail: "Label the on-screen buttons with shapes and L1, R1", isOn: $hasPlayStationLabels)
+                    Divider().overlay(Color.glassBorder)
                     setting("Show metrics", detail: "Frame rate and latency from the gaming PC", isOn: $showsMetrics)
                 }
                 .padding(.horizontal, 16)
@@ -120,7 +123,7 @@ struct PlayView: View {
             }
             .tint(Color.success)
             .allowsHitTesting(false)
-            .padding(.vertical, 12)
+            .padding(.vertical, 8)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

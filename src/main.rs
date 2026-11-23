@@ -57,9 +57,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     start_audio_sink()?;
     let mut robot = open_robot(&args)?;
-    let audio_source = format!(
-        "pulsesrc device={AUDIO_SINK}.monitor ! audio/x-raw,channels=2"
-    );
+    let audio_source = format!("pulsesrc device={AUDIO_SINK}.monitor ! audio/x-raw,channels=2");
     let audio_options = AudioOptions {
         channels: AudioChannels::Stereo,
         bitrate_kbps: 128,
@@ -123,6 +121,9 @@ fn start_audio_sink() -> Result<(), Box<dyn Error>> {
             ])
             .status()?;
     }
+    Command::new("pactl")
+        .args(["set-default-sink", AUDIO_SINK])
+        .status()?;
     Ok(())
 }
 
@@ -176,7 +177,6 @@ impl Gamescope {
                 "--",
             ])
             .args(&args.command)
-            .env("PULSE_SINK", AUDIO_SINK)
             .process_group(0)
             .spawn()?;
         let input_socket =

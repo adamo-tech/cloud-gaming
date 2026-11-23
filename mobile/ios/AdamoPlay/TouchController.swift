@@ -3,17 +3,22 @@ import SwiftUI
 private let buttonSize: CGFloat = 44
 private let stickSize: CGFloat = 116
 private let raise: CGFloat = 72
+private let stickButtonSize: CGFloat = 34
+private let stickButtonSpacing: CGFloat = 10
+
+let playStationLabelsKey = "hasPlayStationLabels"
 
 struct TouchController: View {
     let gamepads: Gamepads
     var isStacked = false
+    @AppStorage(playStationLabelsKey) private var hasPlayStationLabels = false
 
     var body: some View {
         VStack {
             HStack {
                 HStack(spacing: 10) {
-                    Shoulder(label: "LT") { gamepads.setTouchTrigger(6, isPressed: $0) }
-                    Shoulder(label: "LB") { gamepads.setTouchButton(4, isPressed: $0) }
+                    Shoulder(label: hasPlayStationLabels ? "L2" : "LT") { gamepads.setTouchTrigger(6, isPressed: $0) }
+                    Shoulder(label: hasPlayStationLabels ? "L1" : "LB") { gamepads.setTouchButton(4, isPressed: $0) }
                 }
                 Spacer()
                 if isStacked {
@@ -21,14 +26,18 @@ struct TouchController: View {
                     Spacer()
                 }
                 HStack(spacing: 10) {
-                    Shoulder(label: "RB") { gamepads.setTouchButton(5, isPressed: $0) }
-                    Shoulder(label: "RT") { gamepads.setTouchTrigger(7, isPressed: $0) }
+                    Shoulder(label: hasPlayStationLabels ? "R1" : "RB") { gamepads.setTouchButton(5, isPressed: $0) }
+                    Shoulder(label: hasPlayStationLabels ? "R2" : "RT") { gamepads.setTouchTrigger(7, isPressed: $0) }
                 }
             }
             Spacer()
             HStack(alignment: .bottom) {
                 HStack(alignment: .bottom, spacing: 18) {
-                    Stick { gamepads.setTouchStick(xAxis: 0, x: $0, y: $1) }.padding(.bottom, raise)
+                    VStack(spacing: stickButtonSpacing) {
+                        Stick { gamepads.setTouchStick(xAxis: 0, x: $0, y: $1) }
+                        PadButton(text: "L3", size: stickButtonSize) { gamepads.setTouchButton(10, isPressed: $0) }
+                    }
+                    .padding(.bottom, raise - stickButtonSpacing - stickButtonSize)
                     Cross(
                         top: PadButton(symbol: "chevron.up", cornerRadius: 10) { gamepads.setTouchButton(12, isPressed: $0) },
                         left: PadButton(symbol: "chevron.left", cornerRadius: 10) { gamepads.setTouchButton(14, isPressed: $0) },
@@ -42,12 +51,15 @@ struct TouchController: View {
                     Spacer()
                 }
                 HStack(alignment: .bottom, spacing: 18) {
-                    Stick { gamepads.setTouchStick(xAxis: 2, x: $0, y: $1) }
+                    VStack(spacing: stickButtonSpacing) {
+                        PadButton(text: "R3", size: stickButtonSize) { gamepads.setTouchButton(11, isPressed: $0) }
+                        Stick { gamepads.setTouchStick(xAxis: 2, x: $0, y: $1) }
+                    }
                     Cross(
-                        top: PadButton(text: "Y") { gamepads.setTouchButton(3, isPressed: $0) },
-                        left: PadButton(text: "X") { gamepads.setTouchButton(2, isPressed: $0) },
-                        right: PadButton(text: "B") { gamepads.setTouchButton(1, isPressed: $0) },
-                        bottom: PadButton(text: "A") { gamepads.setTouchButton(0, isPressed: $0) }
+                        top: faceButton(xbox: "Y", playStation: "triangle", index: 3),
+                        left: faceButton(xbox: "X", playStation: "square", index: 2),
+                        right: faceButton(xbox: "B", playStation: "circle", index: 1),
+                        bottom: faceButton(xbox: "A", playStation: "xmark", index: 0)
                     )
                     .padding(.bottom, raise)
                 }
@@ -55,6 +67,10 @@ struct TouchController: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 16)
+    }
+
+    private func faceButton(xbox: String, playStation: String, index: Int) -> PadButton {
+        hasPlayStationLabels ? PadButton(symbol: playStation) { gamepads.setTouchButton(index, isPressed: $0) } : PadButton(text: xbox) { gamepads.setTouchButton(index, isPressed: $0) }
     }
 
     private var menuButtons: some View {

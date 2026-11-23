@@ -18,6 +18,8 @@ const val LEFT_TRIGGER_AXIS = 4
 const val RIGHT_TRIGGER_AXIS = 5
 const val VIRTUAL_GAMEPAD_INDEX = 0
 private const val PHONE_VIBRATION_KEY = "isPhoneVibrationEnabled"
+private const val PLAYSTATION_LABELS_KEY = "hasPlayStationLabels"
+private const val SHOWS_METRICS_KEY = "showsMetrics"
 
 private val STANDARD_BUTTONS = mapOf(
     KeyEvent.KEYCODE_BUTTON_A to 0,
@@ -48,6 +50,8 @@ class Gamepads(context: Context, private val preferences: SharedPreferences) : I
     @Volatile var connection: Connection? = null
     val hasPhysicalGamepad = mutableStateOf(false)
     val isPhoneVibrationEnabled = mutableStateOf(preferences.getBoolean(PHONE_VIBRATION_KEY, true))
+    val hasPlayStationLabels = mutableStateOf(preferences.getBoolean(PLAYSTATION_LABELS_KEY, false))
+    val showsMetrics = mutableStateOf(preferences.getBoolean(SHOWS_METRICS_KEY, false))
     val virtualGamepad = GamepadState()
     private val gamepadIndices = mutableMapOf<Int, Int>()
     private val gamepadStates = mutableMapOf<Int, GamepadState>()
@@ -95,6 +99,16 @@ class Gamepads(context: Context, private val preferences: SharedPreferences) : I
     fun setPhoneVibrationEnabled(isEnabled: Boolean) {
         isPhoneVibrationEnabled.value = isEnabled
         preferences.edit().putBoolean(PHONE_VIBRATION_KEY, isEnabled).apply()
+    }
+
+    fun setPlayStationLabels(hasPlayStationLabels: Boolean) {
+        this.hasPlayStationLabels.value = hasPlayStationLabels
+        preferences.edit().putBoolean(PLAYSTATION_LABELS_KEY, hasPlayStationLabels).apply()
+    }
+
+    fun setShowsMetrics(showsMetrics: Boolean) {
+        this.showsMetrics.value = showsMetrics
+        preferences.edit().putBoolean(SHOWS_METRICS_KEY, showsMetrics).apply()
     }
 
     fun rumble(rumble: GamepadRumble) {

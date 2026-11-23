@@ -14,6 +14,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import uniffi.adamo_play.Connection
 import uniffi.adamo_play.PlayException
 import uniffi.adamo_play.VideoFormat
+import uniffi.adamo_play.fabricNowUs
 import uniffi.adamo_play.videoFormat
 
 private const val RECEIVE_TIMEOUT_MS = 100u
@@ -21,6 +22,8 @@ private const val RECEIVE_TIMEOUT_MS = 100u
 class GameStream(private val connection: Connection, private val gamepads: Gamepads) : SurfaceHolder.Callback {
     val videoAspectRatio = mutableStateOf(16f / 9f)
     val error = mutableStateOf<String?>(null)
+    val framesPerSecond = mutableStateOf(0)
+    val latencyMs = mutableStateOf(0)
     @Volatile private var isRunning = true
     @Volatile private var videoSurface: Surface? = null
     private var videoThread: Thread? = null
@@ -63,6 +66,9 @@ class GameStream(private val connection: Connection, private val gamepads: Gamep
         val inputBufferIndices = LinkedBlockingQueue<Int>()
         var decoder: MediaCodec? = null
         var decoderSize: Pair<UInt, UInt>? = null
+        var windowStartNs = System.nanoTime()
+        var windowFrameCount = 0
+        var windowLatencyUs = 0L
         while (isRunning && videoSurface == surface) {
             val frame = connection.receiveVideo(RECEIVE_TIMEOUT_MS) ?: continue
             val videoFormat = if (frame.isKeyframe) videoFormat(frame.data) else null
@@ -94,6 +100,15 @@ class GameStream(private val connection: Connection, private val gamepads: Gamep
             val index = inputBufferIndices.take()
             decoder.getInputBuffer(index)!!.put(frame.data)
             decoder.queueInputBuffer(index, 0, frame.data.size, System.nanoTime() / 1000, 0)
+            windowFrameCount += 1
+            windowLatencyUs += fabricNowUs().toLong() - frame.captureTimeUs.toLong()
+            if (System.nanoTime() - windowStartNs >= 1_000_000_000) {
+                framesPerSecond.value = windowFrameCount
+                latencyMs.value = (windowLatencyUs / windowFrameCount / 1000).toInt()
+                windowStartNs = System.nanoTime()
+                windowFrameCount = 0
+                windowLatencyUs = 0
+            }
         }
         decoder?.stop()
         decoder?.release()
