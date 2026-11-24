@@ -60,7 +60,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
     start_audio_sink()?;
-    let mut robot = open_robot(&args)?;
+    let mut robot = open_robot(&args)?.with_recording(adamo::Recording::OFF);
     robot.set_experimental(args.experimental)?;
     let audio_source = format!("pulsesrc device={AUDIO_SINK}.monitor ! audio/x-raw,channels=2");
     let audio_options = AudioOptions {
