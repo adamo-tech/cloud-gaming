@@ -82,13 +82,15 @@ The browser player runs in Chrome, Firefox and Safari. Safari decodes AV1 only u
 
 Open [play.adamohq.com](https://play.adamohq.com), enter the gaming PC's address (for example `192.168.1.20`) and the pairing key, and press Play. The player goes fullscreen and captures the mouse and keyboard. Press Esc to release them, and click the video to capture them again. Up to four gamepads connected to the computer are forwarded.
 
-To run the player yourself, open http://localhost:5180 after:
+To run the player yourself, open http://localhost:5179 after:
 
 ```
 cd web
 npm install
-npm run dev
+npm run dev -- --port 5179
 ```
+
+Adamo's relays accept browser players only from play.adamohq.com and http://localhost:5179, so use that address for Adamo relay mode.
 
 ## Play on Android
 
