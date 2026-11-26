@@ -80,13 +80,17 @@ The host waits for a player before it starts gamescope, at that player's screen 
 
 The browser player runs in Chrome, Firefox and Safari. Safari decodes AV1 only up to 1080p, so for Safari start the host with `--max-width 1920 --max-height 1080`, or with `--codec h264`. Only Chrome locks the keyboard, so in Firefox and Safari some shortcuts still go to the browser.
 
+Open [play.adamohq.com](https://play.adamohq.com), enter the gaming PC's address (for example `192.168.1.20`) and the pairing key, and press Play. The player goes fullscreen and captures the mouse and keyboard. Press Esc to release them, and click the video to capture them again. Up to four gamepads connected to the computer are forwarded.
+
+To run the player yourself, open http://localhost:5179 after:
+
 ```
 cd web
 npm install
-npm run dev
+npm run dev -- --port 5179
 ```
 
-Open http://localhost:5180, enter the gaming PC's address (for example `192.168.1.20`) and the pairing key, and press Play. The player goes fullscreen and captures the mouse and keyboard. Press Esc to release them, and click the video to capture them again. Up to four gamepads connected to the computer are forwarded.
+Adamo's relays accept browser players only from play.adamohq.com and http://localhost:5179, so use that address for Adamo relay mode.
 
 ## Play on Android
 
