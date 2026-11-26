@@ -7,3 +7,4 @@ node_modules
 /mobile/android/local.properties
 /mobile/ios/Generated
 /mobile/ios/AdamoPlay.xcodeproj
+/web/dist

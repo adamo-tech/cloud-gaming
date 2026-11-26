@@ -1,0 +1,42 @@
+name: Deploy player
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - web/**
+      - .github/workflows/deploy-player.yml
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-player
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    if: vars.PLAY_PUBLISH_ROLE != '' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx vite build
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.PLAY_PUBLISH_ROLE }}
+          role-session-name: cloud-gaming-player-deploy
+          aws-region: eu-west-2
+      - run: aws s3 sync dist s3://adamo-cloud-gaming-player
+      - run: aws cloudfront create-invalidation --distribution-id ${{ vars.PLAY_DISTRIBUTION_ID }} --paths "/*"
